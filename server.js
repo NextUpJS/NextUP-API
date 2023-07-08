@@ -8,6 +8,12 @@ const app = express();
 const morgan = require('morgan');
 app.use(express.json());
 app.use(morgan('combined'));
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
+app.set('etag', false);
 
 const spotifyApiContainer = {
   spotifyApis: {},
