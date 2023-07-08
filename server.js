@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const SpotifyWebApi = require('spotify-web-api-node');
