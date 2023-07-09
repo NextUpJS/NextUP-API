@@ -8,6 +8,12 @@ const app = express();
 const morgan = require('morgan');
 app.use(express.json());
 app.use(morgan('combined'));
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
+app.set('etag', false);
 
 const spotifyApiContainer = {
   spotifyApis: {},
@@ -204,6 +210,7 @@ app.get('/callback', function (req, res) {
 
   spotifyApi.authorizationCodeGrant(code).then(
     function (data) {
+      console.log(data.body);
       const access_token = data.body['access_token'];
       const refresh_token = data.body['refresh_token'];
       const expires_in = data.body['expires_in'];
@@ -215,7 +222,21 @@ app.get('/callback', function (req, res) {
       console.log('refresh_token:', refresh_token);
 
       console.log(`Successfully retrieved access token. Expires in ${expires_in} s.`);
-      res.send('Success! You can now close the window.');
+
+      // Retrieve the user ID
+      spotifyApi.getMe().then(
+        function (data) {
+          const userId = data.body.id;
+          console.log('User ID:', userId);
+
+          // Continue with your logic here, such as redirecting the user or sending the ID in the response
+          res.redirect('https://nextup.rocks/host/abc123');
+        },
+        function (err) {
+          console.error('Error getting user ID:', err);
+          res.send(`Error getting user ID: ${err}`);
+        },
+      );
     },
     function (err) {
       console.error('Error getting Tokens:', err);
