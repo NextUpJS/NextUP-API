@@ -197,52 +197,51 @@ app.get('/login', function (req, res) {
   }
 });
 
-app.get('/callback', function (req, res) {
-  const error = req.query.error;
-  const code = req.query.code;
-  const state = req.query.state;
+app.get('/callback', async (req, res) => {
+  const { error, code, state } = req.query;
 
   if (error) {
     console.error('Callback Error:', error);
-    res.send(`Callback Error: ${error}`);
-    return;
+    return res.send(`Callback Error: ${error}`);
   }
 
-  spotifyApi.authorizationCodeGrant(code).then(
-    function (data) {
-      console.log(data.body);
-      const access_token = data.body['access_token'];
-      const refresh_token = data.body['refresh_token'];
-      const expires_in = data.body['expires_in'];
+  try {
+    const data = await spotifyApi.authorizationCodeGrant(code);
+    const { access_token, refresh_token, expires_in } = data.body;
 
-      spotifyApi.setAccessToken(access_token);
-      spotifyApi.setRefreshToken(refresh_token);
+    spotifyApi.setAccessToken(access_token);
+    spotifyApi.setRefreshToken(refresh_token);
 
-      console.log('access_token:', access_token);
-      console.log('refresh_token:', refresh_token);
+    console.log('access_token:', access_token);
+    console.log('refresh_token:', refresh_token);
+    console.log(`Successfully retrieved access token. Expires in ${expires_in} s.`);
 
-      console.log(`Successfully retrieved access token. Expires in ${expires_in} s.`);
+    try {
+      const user = await spotifyApi.getMe();
+      const userId = user.body.id;
 
-      // Retrieve the user ID
-      spotifyApi.getMe().then(
-        function (data) {
-          const userId = data.body.id;
-          console.log('User ID:', userId);
-
-          // Continue with your logic here, such as redirecting the user or sending the ID in the response
-          res.redirect('https://nextup.rocks/host/abc123');
+      const updatedUser = await prisma.user.upsert({
+        where: { name: userId },
+        update: {
+          spotify_token: access_token,
+          spotify_refresh_token: refresh_token,
         },
-        function (err) {
-          console.error('Error getting user ID:', err);
-          res.send(`Error getting user ID: ${err}`);
+        create: {
+          name: userId,
+          spotify_token: access_token,
+          spotify_refresh_token: refresh_token,
         },
-      );
-    },
-    function (err) {
-      console.error('Error getting Tokens:', err);
-      res.send(`Error getting Tokens: ${err}`);
-    },
-  );
+      });
+      console.log('User ID:', userId);
+      return res.redirect('/users');
+    } catch (err) {
+      console.error('Error getting user ID:', err);
+      return res.send(`Error getting user ID: ${err}`);
+    }
+  } catch (err) {
+    console.error('Error getting Tokens:', err);
+    return res.send(`Error getting Tokens: ${err}`);
+  }
 });
 
 app.listen(process.env.APP_PORT, () => {

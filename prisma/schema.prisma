@@ -11,17 +11,17 @@ datasource db {
 }
 
 model User {
-  id    Int     @id @default(autoincrement())
-  name  String
-  Event Event[]
+  id                    Int     @id @default(autoincrement())
+  name                  String  @unique
+  Event                 Event[]
+  spotify_token         String  @default("")
+  spotify_refresh_token String  @default("")
 }
 
 model Event {
-  id                 Int    @id @default(autoincrement())
-  host               User   @relation(fields: [host_id], references: [id])
-  host_id            Int
-  host_token         String @default("")
-  host_refresh_token String @default("")
+  id      Int  @id @default(autoincrement())
+  host    User @relation(fields: [host_id], references: [id])
+  host_id Int
 }
 
 model Playlist {
