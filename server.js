@@ -79,43 +79,54 @@ async function getSpotifyClient(req, res, next) {
   }
 }
 
-app.get('/events/:id/songs', async (req, res) => {
-  const eventID = req.params.id;
-  if (!spotifyApiContainer.getApiInstance(eventID)) {
-    spotifyApiContainer.createApiInstance(eventID);
+app.get('/events/:id/playlist', async (req, res) => {
+  const eventID = parseInt(req.params.id);
+  const event = await prisma.event.findUnique({
+    where: { id: eventID },
+    include: { playlist: true },
+  });
+
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found' });
   }
-  const songs = await prisma.song.findMany();
-  res.json(songs);
+
+  const playlist = await prisma.playlist.findUnique({
+    where: { id: event.playlistId },
+    include: { songs: true },
+  });
+
+  res.json({ playlist });
 });
 
-app.post('/events/:id/songs', async (req, res) => {
-  const eventID = req.params.id;
-  if (!spotifyApiContainer.getApiInstance(eventID)) {
-    spotifyApiContainer.createApiInstance(eventID);
-  }
-
+app.post('/events/:id/songs', getSpotifyClient, async (req, res) => {
   try {
-    const { id } = req.params;
-    const { playlistId } = req.body;
-
-    const playlist = await prisma.playlist.findUnique({
-      where: { id: parseInt(id) },
+    const { songID } = req.body;
+    const eventID = parseInt(req.params.id);
+    const event = await prisma.event.findUnique({
+      where: { id: eventID },
+      include: { playlist: true },
     });
 
-    if (!playlist) {
-      return res.status(404).json({ message: 'Playlist not found' });
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
     }
+
+    const playlist = await prisma.playlist.findUnique({
+      where: { id: event.playlistId },
+      include: { songs: true },
+    });
 
     const song = await prisma.song.create({
       data: {
-        playlistId: parseInt(id),
+        playlistId: playlist.id,
       },
     });
 
-    res.status(200).json({ message: 'Song added successfully', song });
+    console.log('Song added successfully');
+    return res.status(200).json({ message: 'Song added successfully', song });
   } catch (error) {
-    console.error('Error adding song:', error);
-    res.status(500).json({ message: 'An error occurred while adding the song' });
+    console.error('An error occurred while adding the song:', error);
+    return res.status(500).send('An error occurred while adding the song');
   }
 });
 
@@ -133,7 +144,7 @@ app.get('/events/:id', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { host: true },
+      include: { host: true, playlist: { include: { songs: true } } },
     });
 
     if (event) {
@@ -142,24 +153,6 @@ app.get('/events/:id', async (req, res) => {
       res.status(404).json({ error: 'Event not found' });
     }
   } catch (error) {
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-app.post('/events', async (req, res) => {
-  const { hostId, hostToken } = req.body;
-
-  try {
-    const event = await prisma.event.create({
-      data: {
-        host: { connect: { id: hostId } },
-        host_token: hostToken,
-      },
-    });
-
-    res.json(event);
-  } catch (error) {
-    console.error(error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -257,9 +250,14 @@ app.get('/callback', async (req, res) => {
 
       console.log('updated user: ', updatedUser);
 
+      const playlist = await prisma.playlist.create({
+        data: {},
+      });
+
       const event = await prisma.event.create({
         data: {
           host: { connect: { id: updatedUser.id } },
+          playlist: { connect: { id: playlist.id } },
         },
       });
 
