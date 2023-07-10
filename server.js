@@ -1,17 +1,17 @@
 require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
-const SpotifyWebApi = require('spotify-web-api-node');
 const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
 
-const prisma = new PrismaClient();
 const app = express();
 const morgan = require('morgan');
+
 app.use(express.json());
 app.use(morgan('combined'));
+
 const allowedOrigins = ['https://nextup.rocks'];
 
 app.use(
