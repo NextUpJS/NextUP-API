@@ -82,25 +82,25 @@ app.get('/users', async (req, res) => {
   res.json(users);
 });
 
-app.post('/users', async (req, res) => {
-  try {
-    const { name, email } = req.body;
-    if (!name) {
-      return res.status(400).json({ error: 'Invalid request. name and email are required.' });
-    }
+// app.post('/users', async (req, res) => {
+//   try {
+//     const { name, email } = req.body;
+//     if (!name) {
+//       return res.status(400).json({ error: 'Invalid request. name and email are required.' });
+//     }
 
-    const user = await prisma.user.create({
-      data: {
-        name,
-      },
-    });
+//     const user = await prisma.user.create({
+//       data: {
+//         name,
+//       },
+//     });
 
-    res.json(user);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
-});
+//     res.json(user);
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: err.message });
+//   }
+// });
 
 app.get('/events/:id', async (req, res) => {
   const eventId = parseInt(req.params.id);
