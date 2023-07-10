@@ -49,6 +49,36 @@ const spotifyApiContainer = {
 spotifyApiContainer.createApiInstance('login');
 const spotifyApi = spotifyApiContainer.getApiInstance('login');
 
+async function getSpotifyClient(req, res, next) {
+  try {
+    const eventId = parseInt(req.params.id);
+
+    let spotifyClient = spotifyApiContainer.getApiInstance(eventId);
+    if (!spotifyClient) {
+      spotifyApiContainer.createApiInstance(eventId);
+      spotifyClient = spotifyApiContainer.getApiInstance(eventId);
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      include: { host: true },
+    });
+
+    if (!event || !event.host) {
+      console.error('Event or host not found');
+      return res.status(404).send('Event or host not found');
+    }
+
+    spotifyClient.setAccessToken(event.host.spotify_token);
+
+    req.spotifyClient = spotifyClient;
+    next();
+  } catch (err) {
+    console.error('Something went wrong!', err);
+    return res.status(500).send('Something went wrong');
+  }
+}
+
 app.get('/events/:id/songs', async (req, res) => {
   const eventID = req.params.id;
   if (!spotifyApiContainer.getApiInstance(eventID)) {
@@ -65,20 +95,17 @@ app.post('/events/:id/songs', async (req, res) => {
   }
 
   try {
-    const { id } = req.params; // Extract the 'id' from the request parameters
-    const { playlistId } = req.body; // Assuming the playlist ID is sent in the request body
+    const { id } = req.params;
+    const { playlistId } = req.body;
 
-    // Find the playlist based on the provided 'id'
     const playlist = await prisma.playlist.findUnique({
       where: { id: parseInt(id) },
     });
 
-    // If the playlist doesn't exist, return an error
     if (!playlist) {
       return res.status(404).json({ message: 'Playlist not found' });
     }
 
-    // Create a new song and associate it with the playlist
     const song = await prisma.song.create({
       data: {
         playlistId: parseInt(id),
@@ -97,26 +124,6 @@ app.get('/users', async (req, res) => {
   res.json(users);
 });
 
-// app.post('/users', async (req, res) => {
-//   try {
-//     const { name, email } = req.body;
-//     if (!name) {
-//       return res.status(400).json({ error: 'Invalid request. name and email are required.' });
-//     }
-
-//     const user = await prisma.user.create({
-//       data: {
-//         name,
-//       },
-//     });
-
-//     res.json(user);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: err.message });
-//   }
-// });
-
 app.get('/events/:id', async (req, res) => {
   const eventId = parseInt(req.params.id);
   if (!spotifyApiContainer.getApiInstance(eventId)) {
@@ -126,7 +133,7 @@ app.get('/events/:id', async (req, res) => {
   try {
     const event = await prisma.event.findUnique({
       where: { id: eventId },
-      include: { host: true }, // Include the related host information
+      include: { host: true },
     });
 
     if (event) {
@@ -157,33 +164,9 @@ app.post('/events', async (req, res) => {
   }
 });
 
-app.get('/events/:id/pause', async (req, res) => {
+app.get('/events/:id/pause', getSpotifyClient, async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
-
-    // Retrieve the Spotify API instance for the event or create a new one if it doesn't exist
-    let spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    if (!spotifyClient) {
-      spotifyApiContainer.createApiInstance(eventId);
-      spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    }
-
-    // Fetch the event details, including the host information
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { host: true },
-    });
-
-    if (!event || !event.host) {
-      console.error('Event or host not found');
-      return res.status(404).send('Event or host not found');
-    }
-
-    // Set the host's Spotify token in the Spotify API client
-    spotifyClient.setAccessToken(event.host.spotify_token);
-
-    // Pause the playback
-    await spotifyClient.pause();
+    await req.spotifyClient.pause();
 
     console.log('Playback paused successfully');
     return res.send('Playback paused successfully');
@@ -193,36 +176,12 @@ app.get('/events/:id/pause', async (req, res) => {
   }
 });
 
-app.get('/events/:id/now-playing', async (req, res) => {
+app.get('/events/:id/now-playing', getSpotifyClient, async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
-
-    // Retrieve the Spotify API instance for the event or create a new one if it doesn't exist
-    let spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    if (!spotifyClient) {
-      spotifyApiContainer.createApiInstance(eventId);
-      spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    }
-
-    // Fetch the event details, including the host information
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { host: true },
-    });
-
-    if (!event || !event.host) {
-      console.error('Event or host not found');
-      return res.status(404).send('Event or host not found');
-    }
-
-    // Set the host's Spotify token in the Spotify API client
-    spotifyClient.setAccessToken(event.host.spotify_token);
-
-    // Get the current playback state
-    const data = await spotifyClient.getMyCurrentPlaybackState();
+    const data = await req.spotifyClient.getMyCurrentPlaybackState();
 
     if (data.body && data.body.is_playing) {
-      res.json(data.body.item); // Return the full song object as JSON
+      res.json(data.body.item);
     } else {
       res.json({ message: 'User is not playing anything, or playback is paused.' });
     }
@@ -232,33 +191,9 @@ app.get('/events/:id/now-playing', async (req, res) => {
   }
 });
 
-app.get('/events/:id/resume', async (req, res) => {
+app.get('/events/:id/resume', getSpotifyClient, async (req, res) => {
   try {
-    const eventId = parseInt(req.params.id);
-
-    // Retrieve the Spotify API instance for the event or create a new one if it doesn't exist
-    let spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    if (!spotifyClient) {
-      spotifyApiContainer.createApiInstance(eventId);
-      spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    }
-
-    // Fetch the event details, including the host information
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { host: true },
-    });
-
-    if (!event || !event.host) {
-      console.error('Event or host not found');
-      return res.status(404).send('Event or host not found');
-    }
-
-    // Set the host's Spotify token in the Spotify API client
-    spotifyClient.setAccessToken(event.host.spotify_token);
-
-    // Resume the playback
-    await spotifyClient.play();
+    await req.spotifyClient.play();
 
     console.log('Playback resumed successfully');
     return res.send('Playback resumed successfully');
@@ -279,7 +214,6 @@ app.get('/login', function (req, res) {
     var authorizeURL = spotifyApi.createAuthorizeURL(scopes);
     res.redirect(authorizeURL);
   } catch (error) {
-    // Handle the error here
     console.error('Error occurred:', error);
     res.status(500).send('Internal Server Error');
   }
