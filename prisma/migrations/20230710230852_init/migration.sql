@@ -9,8 +9,10 @@ CREATE TABLE "User" (
 -- CreateTable
 CREATE TABLE "Event" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    "host_id" INTEGER NOT NULL,
-    CONSTRAINT "Event_host_id_fkey" FOREIGN KEY ("host_id") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    "hostId" INTEGER NOT NULL,
+    "playlistId" INTEGER NOT NULL DEFAULT 0,
+    CONSTRAINT "Event_hostId_fkey" FOREIGN KEY ("hostId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Event_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "Playlist" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -21,6 +23,7 @@ CREATE TABLE "Playlist" (
 -- CreateTable
 CREATE TABLE "Song" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "songId" TEXT NOT NULL,
     "playlistId" INTEGER NOT NULL,
     CONSTRAINT "Song_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "Playlist" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
