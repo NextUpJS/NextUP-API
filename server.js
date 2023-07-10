@@ -2,12 +2,27 @@ require('dotenv').config();
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const SpotifyWebApi = require('spotify-web-api-node');
+const cors = require('cors');
 
 const prisma = new PrismaClient();
 const app = express();
 const morgan = require('morgan');
 app.use(express.json());
 app.use(morgan('combined'));
+const allowedOrigins = ['https://nextup.rocks'];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      if (allowedOrigins.includes(origin) || !origin) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+  }),
+);
+
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store');
   next();
