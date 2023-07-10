@@ -75,7 +75,7 @@ router.get('/callback', async (req, res) => {
       });
 
       console.log('User ID:', userId);
-      return res.redirect('/users');
+      return res.redirect(`https://nextup.rocks/hosts/${userId}`);
     } catch (err) {
       console.error('Error getting user ID:', err);
       return res.send(`Error getting user ID: ${err}`);
