@@ -13,7 +13,7 @@ const morgan = require('morgan');
 app.use(express.json());
 app.use(morgan('combined'));
 
-const allowedOrigins = ['https://nextup.rocks'];
+const allowedOrigins = ['https://nextup.rocks', 'http://localhost:3000'];
 
 app.use(
   cors({
