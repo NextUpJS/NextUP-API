@@ -15,7 +15,23 @@ router.get('/:name', async (req, res) => {
     if (host) {
       const events = await prisma.event.findMany({
         where: { hostId: host.id },
-        include: { host: true, playlist: { include: { queue: true } } },
+        include: {
+          host: true,
+          playlist: {
+            include: {
+              queue: {
+                include: {
+                  Track: {
+                    include: {
+                      Album: true,
+                      Artist: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
       });
 
       if (events.length > 0) {
