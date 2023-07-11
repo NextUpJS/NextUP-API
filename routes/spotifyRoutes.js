@@ -33,7 +33,7 @@ router.get('/login', function (req, res) {
   }
 });
 
-router.get('/callback', getTokens, getUserData, createPlaylist, (req, res) => {
+router.get('/callback', getTokens, getUserData, (req, res) => {
   return res.redirect('/users');
 });
 

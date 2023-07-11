@@ -5,6 +5,7 @@ const cors = require('cors');
 const userRoutes = require('./routes/userRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
+const scheduledFunctions = require('./scheduledFunctions/cron');
 
 const app = express();
 const morgan = require('morgan');
@@ -36,6 +37,8 @@ app.use('/events', eventRoutes);
 app.use('/', spotifyRoutes);
 
 app.set('etag', false);
+
+scheduledFunctions.initScheduledJobs();
 
 app.listen(process.env.APP_PORT, () => {
   console.log(`Server is running on http://localhost:${process.env.APP_PORT}`);

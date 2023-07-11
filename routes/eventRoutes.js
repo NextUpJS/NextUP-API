@@ -223,14 +223,6 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
-    const songDurationMs = trackData.body.duration_ms;
-
-    setTimeout(async () => {
-      // The event that will run when the song is over
-      // Do what you need to do here
-      console.log(`The song ${trackData.body.name} is over.`);
-    }, songDurationMs);
-
     // const song = await prisma.song.create({
     //   data: {
     //     songId: track.id,
@@ -248,9 +240,9 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
 
     console.log('event', event.playlist.spotify_id);
 
-    await spotifyClient.addTracksToPlaylist(event.playlist.spotify_id, [
-      `spotify:track:${track.id}`,
-    ]);
+    // await spotifyClient.addTracksToPlaylist(event.playlist.spotify_id, [
+    //   `spotify:track:${track.id}`,
+    // ]);
 
     console.log('Song added successfully');
     return res.status(200).json({
