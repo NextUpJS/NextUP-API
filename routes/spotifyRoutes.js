@@ -16,6 +16,8 @@ router.get('/login', function (req, res) {
       'user-read-email',
       'user-modify-playback-state',
       'user-read-playback-state',
+      'playlist-modify-public',
+      'playlist-modify-private',
     ];
     var authorizeURL = spotifyApi.createAuthorizeURL(scopes);
     res.redirect(authorizeURL);
@@ -25,9 +27,8 @@ router.get('/login', function (req, res) {
   }
 });
 
-router.get('/callback', async (req, res) => {
-  const { error, code, state } = req.query;
-
+const getTokens = async (req, res, next) => {
+  const { error, code } = req.query;
   if (error) {
     console.error('Callback Error:', error);
     return res.send(`Callback Error: ${error}`);
@@ -40,50 +41,73 @@ router.get('/callback', async (req, res) => {
     spotifyApi.setAccessToken(access_token);
     spotifyApi.setRefreshToken(refresh_token);
 
-    console.log('access_token:', access_token);
-    console.log('refresh_token:', refresh_token);
-    console.log(`Successfully retrieved access token. Expires in ${expires_in} s.`);
-
-    try {
-      const user = await spotifyApi.getMe();
-      const userId = user.body.id;
-
-      const updatedUser = await prisma.user.upsert({
-        where: { name: userId },
-        update: {
-          spotify_token: access_token,
-          spotify_refresh_token: refresh_token,
-        },
-        create: {
-          name: userId,
-          spotify_token: access_token,
-          spotify_refresh_token: refresh_token,
-        },
-      });
-
-      console.log('updated user: ', updatedUser);
-
-      const playlist = await prisma.playlist.create({
-        data: {},
-      });
-
-      const event = await prisma.event.create({
-        data: {
-          host: { connect: { id: updatedUser.id } },
-          playlist: { connect: { id: playlist.id } },
-        },
-      });
-
-      console.log('User ID:', userId);
-      return res.redirect('/users');
-    } catch (err) {
-      console.error('Error getting user ID:', err);
-      return res.send(`Error getting user ID: ${err}`);
-    }
+    req.tokens = {
+      access_token,
+      refresh_token,
+      expires_in,
+    };
+    next();
   } catch (err) {
     console.error('Error getting Tokens:', err);
     return res.send(`Error getting Tokens: ${err}`);
   }
+};
+
+const getUserData = async (req, res, next) => {
+  try {
+    const user = await spotifyApi.getMe();
+    const userId = user.body.id;
+
+    const updatedUser = await prisma.user.upsert({
+      where: { name: userId },
+      update: {
+        spotify_token: req.tokens.access_token,
+        spotify_refresh_token: req.tokens.refresh_token,
+      },
+      create: {
+        name: userId,
+        spotify_token: req.tokens.access_token,
+        spotify_refresh_token: req.tokens.refresh_token,
+      },
+    });
+
+    req.userId = userId;
+    req.updatedUser = updatedUser;
+    next();
+  } catch (err) {
+    console.error('Error getting user ID:', err);
+    return res.send(`Error getting user ID: ${err}`);
+  }
+};
+
+const createPlaylist = async (req, res, next) => {
+  try {
+    const data = await spotifyApi.createPlaylist(`NextUp - ${req.userId}`, {
+      description: 'nextup.rocks',
+      public: false,
+    });
+
+    let playListId = data.body['id'];
+
+    const playlist = await prisma.playlist.create({
+      data: { spotify_id: playListId },
+    });
+    const event = await prisma.event.create({
+      data: {
+        host: { connect: { id: req.updatedUser.id } },
+        playlist: { connect: { id: playlist.id } },
+      },
+    });
+
+    next();
+  } catch (err) {
+    console.error('Error creating playlist:', err);
+    return res.send(`Error creating playlist: ${err}`);
+  }
+};
+
+router.get('/callback', getTokens, getUserData, createPlaylist, (req, res) => {
+  return res.redirect('/users');
 });
 
 module.exports = router;

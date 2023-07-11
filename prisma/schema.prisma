@@ -33,6 +33,19 @@ model Playlist {
   updated_at DateTime @updatedAt
   songs      Song[]
   events     Event[]
+  queue      Queue[]
+  spotify_id String
+}
+
+model Queue {
+  id         Int       @id @default(autoincrement())
+  position   Int
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  Playlist   Playlist? @relation(fields: [playlistId], references: [id])
+  playlistId Int?
+  Track      Track?    @relation(fields: [trackId], references: [id])
+  trackId    String?
 }
 
 model Song {
@@ -42,4 +55,62 @@ model Song {
   songId     String
   playlist   Playlist? @relation(fields: [playlistId], references: [id])
   playlistId Int
+}
+
+model Artist {
+  id         String  @id @default(uuid())
+  spotifyUrl String
+  href       String
+  name       String
+  artistType String
+  uri        String
+  Album      Album[] // relationship
+  Track      Track[] // relationship
+}
+
+model Album {
+  id                   String  @id @default(uuid())
+  albumType            String
+  externalSpotifyUrl   String
+  href                 String
+  name                 String
+  releaseDate          String
+  releaseDatePrecision String
+  totalTracks          Int
+  uri                  String
+  Image                Image[] // relationship
+  Artist               Artist  @relation(fields: [artistId], references: [id])
+  artistId             String
+  Track                Track[] // relationship
+}
+
+model Image {
+  id      String @id @default(uuid())
+  height  Int
+  url     String
+  width   Int
+  Album   Album  @relation(fields: [albumId], references: [id])
+  albumId String
+}
+
+model Track {
+  id          String  @id @default(uuid())
+  discNumber  Int
+  durationMs  Int
+  explicit    Boolean
+  isrc        String
+  externalUrl String
+  href        String
+  isLocal     Boolean
+  name        String
+  popularity  Int
+  previewUrl  String
+  trackNumber Int
+  trackType   String
+  uri         String
+  Album       Album   @relation(fields: [albumId], references: [id])
+  albumId     String
+  Artist      Artist  @relation(fields: [artistId], references: [id])
+  artistId    String
+  queue       Queue[]
 }
