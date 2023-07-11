@@ -20,25 +20,34 @@ const spotifyApiContainer = {
 
 async function getSpotifyClient(req, res, next) {
   try {
-    const eventId = parseInt(req.params.id);
+    const hostName = req.params.name;
 
-    let spotifyClient = spotifyApiContainer.getApiInstance(eventId);
-    if (!spotifyClient) {
-      spotifyApiContainer.createApiInstance(eventId);
-      spotifyClient = spotifyApiContainer.getApiInstance(eventId);
+    const host = await prisma.user.findUnique({
+      where: { name: hostName },
+    });
+
+    if (!host) {
+      console.error('Host not found');
+      return res.status(404).send('Host not found');
     }
 
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
+    let spotifyClient = spotifyApiContainer.getApiInstance(host.id);
+    if (!spotifyClient) {
+      spotifyApiContainer.createApiInstance(host.id);
+      spotifyClient = spotifyApiContainer.getApiInstance(host.id);
+    }
+
+    const events = await prisma.event.findMany({
+      where: { hostId: host.id },
       include: { host: true },
     });
 
-    if (!event || !event.host) {
-      console.error('Event or host not found');
-      return res.status(404).send('Event or host not found');
+    if (!events || events.length == 0) {
+      console.error('No events found for this host');
+      return res.status(404).send('No events found for this host');
     }
 
-    spotifyClient.setAccessToken(event.host.spotify_token);
+    spotifyClient.setAccessToken(host.spotify_token);
 
     req.spotifyClient = spotifyClient;
     next();
