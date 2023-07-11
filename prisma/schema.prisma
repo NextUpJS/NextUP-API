@@ -8,15 +8,19 @@ datasource db {
 }
 
 model User {
-  id                    Int     @id @default(autoincrement())
-  name                  String  @unique
+  id                    Int      @id @default(autoincrement())
+  name                  String   @unique
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
   events                Event[]
-  spotify_token         String  @default("")
-  spotify_refresh_token String  @default("")
+  spotify_token         String   @default("")
+  spotify_refresh_token String   @default("")
 }
 
 model Event {
   id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
   host       User     @relation(fields: [hostId], references: [id])
   hostId     Int
   playlist   Playlist @relation(fields: [playlistId], references: [id])
@@ -24,13 +28,17 @@ model Event {
 }
 
 model Playlist {
-  id     Int     @id @default(autoincrement())
-  songs  Song[]
-  events Event[]
+  id         Int      @id @default(autoincrement())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+  songs      Song[]
+  events     Event[]
 }
 
 model Song {
   id         Int       @id @default(autoincrement())
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
   songId     String
   playlist   Playlist? @relation(fields: [playlistId], references: [id])
   playlistId Int

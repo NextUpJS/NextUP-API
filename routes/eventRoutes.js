@@ -4,22 +4,27 @@ const prisma = new PrismaClient();
 const router = express.Router();
 const { getSpotifyClient, spotifyApiContainer } = require('../middleware/spotify');
 
-router.get('/:id', async (req, res) => {
-  const eventId = parseInt(req.params.id);
-  if (!spotifyApiContainer.getApiInstance(eventId)) {
-    spotifyApiContainer.createApiInstance(eventId);
-  }
+router.get('/:name', async (req, res) => {
+  const hostName = req.params.name;
 
   try {
-    const event = await prisma.event.findUnique({
-      where: { id: eventId },
-      include: { host: true, playlist: { include: { songs: true } } },
+    const host = await prisma.user.findUnique({
+      where: { name: hostName },
     });
 
-    if (event) {
-      res.json(event);
+    if (host) {
+      const events = await prisma.event.findMany({
+        where: { hostId: host.id },
+        include: { host: true, playlist: { include: { songs: true } } },
+      });
+
+      if (events.length > 0) {
+        res.json(events);
+      } else {
+        res.status(404).json({ error: 'No events found for this host' });
+      }
     } else {
-      res.status(404).json({ error: 'Event not found' });
+      res.status(404).json({ error: 'Host not found' });
     }
   } catch (error) {
     res.status(500).json({ error: 'Internal server error' });
