@@ -34,7 +34,8 @@ router.get('/login', function (req, res) {
 });
 
 router.get('/callback', getTokens, getUserData, createPlaylist, (req, res) => {
-  return res.redirect('/users');
+  const userId = req.userId;
+  return res.redirect(`https://nextup.rocks/hosts/${userId}`);
 });
 
 module.exports = router;

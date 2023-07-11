@@ -122,9 +122,9 @@ const createPlaylist = async (req, res, next) => {
 
     let playListId = data.body['id'];
 
-    const existingPlaylist = await prisma.playlist.findFirst({
-      where: { name: playlistName },
-    });
+    // const existingPlaylist = await prisma.playlist.findFirst({
+    //   where: { name: playlistName },
+    // });
 
     const playlist = await prisma.playlist.create({
       data: { spotify_id: playListId },
