@@ -15,7 +15,7 @@ router.get('/:name', async (req, res) => {
     if (host) {
       const events = await prisma.event.findMany({
         where: { hostId: host.id },
-        include: { host: true, playlist: { include: { songs: true } } },
+        include: { host: true, playlist: { include: { queue: true } } },
       });
 
       if (events.length > 0) {
@@ -48,7 +48,7 @@ router.get('/:name/now-playing', getSpotifyClient, async (req, res) => {
     const data = await req.spotifyClient.getMyCurrentPlaybackState();
 
     if (data.body && data.body.is_playing) {
-      res.json(data.body.item);
+      res.json(data.body);
     } else {
       res.json({ message: 'User is not playing anything, or playback is paused.' });
     }
@@ -223,12 +223,20 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
-    const song = await prisma.song.create({
-      data: {
-        songId: track.id,
-        playlistId: event.playlistId,
-      },
-    });
+    const songDurationMs = trackData.body.duration_ms;
+
+    setTimeout(async () => {
+      // The event that will run when the song is over
+      // Do what you need to do here
+      console.log(`The song ${trackData.body.name} is over.`);
+    }, songDurationMs);
+
+    // const song = await prisma.song.create({
+    //   data: {
+    //     songId: track.id,
+    //     playlistId: event.playlistId,
+    //   },
+    // });
 
     const queueItem = await prisma.queue.create({
       data: {
@@ -238,10 +246,15 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
+    console.log('event', event.playlist.spotify_id);
+
+    await spotifyClient.addTracksToPlaylist(event.playlist.spotify_id, [
+      `spotify:track:${track.id}`,
+    ]);
+
     console.log('Song added successfully');
     return res.status(200).json({
       message: 'Song added successfully',
-      song: song,
       queueItem: queueItem,
     });
   } catch (error) {

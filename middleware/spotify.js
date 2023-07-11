@@ -125,12 +125,28 @@ const createPlaylist = async (req, res, next) => {
     const playlist = await prisma.playlist.create({
       data: { spotify_id: playListId },
     });
-    const event = await prisma.event.create({
-      data: {
-        host: { connect: { id: req.updatedUser.id } },
-        playlist: { connect: { id: playlist.id } },
-      },
+
+    const existingEvent = await prisma.event.findFirst({
+      where: { hostId: req.updatedUser.id },
     });
+
+    if (existingEvent) {
+      // Update event
+      await prisma.event.update({
+        where: { id: existingEvent.id },
+        data: {
+          playlist: { connect: { id: playlist.id } },
+        },
+      });
+    } else {
+      // Create event
+      await prisma.event.create({
+        data: {
+          host: { connect: { id: req.updatedUser.id } },
+          playlist: { connect: { id: playlist.id } },
+        },
+      });
+    }
 
     next();
   } catch (err) {
