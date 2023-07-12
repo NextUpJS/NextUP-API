@@ -5,6 +5,7 @@ CREATE TABLE "User" (
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
     "spotify_token" TEXT NOT NULL DEFAULT '',
+    "spotify_token_expires_at" DATETIME NOT NULL,
     "spotify_refresh_token" TEXT NOT NULL DEFAULT ''
 );
 
