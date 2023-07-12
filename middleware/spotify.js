@@ -165,4 +165,27 @@ const createPlaylist = async (req, res, next) => {
   }
 };
 
-module.exports = { spotifyApiContainer, getSpotifyClient, createPlaylist, getUserData, getTokens };
+const getCurrentlyPlaying = async (req, res, next) => {
+  try {
+    const currentlyPlaying = await req.spotifyClient.getMyCurrentPlaybackState();
+
+    if (!currentlyPlaying.body.is_playing) {
+      return res.status(404).json({ error: 'No song is currently playing.' });
+    }
+
+    req.currentlyPlaying = currentlyPlaying.body.item;
+    next();
+  } catch (err) {
+    console.error('Error getting current song:', err);
+    return res.status(500).json({ error: 'Error getting current song' });
+  }
+};
+
+module.exports = {
+  spotifyApiContainer,
+  getSpotifyClient,
+  createPlaylist,
+  getUserData,
+  getTokens,
+  getCurrentlyPlaying,
+};

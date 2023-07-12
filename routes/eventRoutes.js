@@ -2,7 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
-const { getSpotifyClient, spotifyApiContainer } = require('../middleware/spotify');
+const { getSpotifyClient, getCurrentlyPlaying } = require('../middleware/spotify');
 
 router.get('/:name', async (req, res) => {
   const hostName = req.params.name;
@@ -86,7 +86,7 @@ router.get('/:name/resume', getSpotifyClient, async (req, res) => {
   }
 });
 
-router.get('/:name/playlist', async (req, res) => {
+router.get('/:name/playlist', getSpotifyClient, getCurrentlyPlaying, async (req, res) => {
   const hostName = req.params.name;
 
   const host = await prisma.user.findUnique({
@@ -112,7 +112,7 @@ router.get('/:name/playlist', async (req, res) => {
     include: { queue: { include: { Track: { include: { Album: true, Artist: true } } } } },
   });
 
-  res.json({ playlist });
+  res.json({ playlist, currentlyPlaying: req.currentlyPlaying });
 });
 
 router.post('/:name/songs', getSpotifyClient, async (req, res) => {
