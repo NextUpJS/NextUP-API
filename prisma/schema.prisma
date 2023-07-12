@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id                    Int      @id @default(autoincrement())
-  name                  String   @unique
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  events                Event[]
-  spotify_token         String   @default("")
-  spotify_refresh_token String   @default("")
+  id                       Int      @id @default(autoincrement())
+  name                     String   @unique
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+  events                   Event[]
+  spotify_token            String   @default("")
+  spotify_token_expires_at DateTime
+  spotify_refresh_token    String   @default("")
 }
 
 model Event {

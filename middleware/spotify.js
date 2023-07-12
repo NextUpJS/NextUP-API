@@ -91,16 +91,22 @@ const getUserData = async (req, res, next) => {
     const user = await spotifyApi.getMe();
     const userId = user.body.id;
 
+    console.log('token ', req.tokens);
+    const now = new Date();
+    now.setSeconds(now.getSeconds() + 3500);
+
     const updatedUser = await prisma.user.upsert({
       where: { name: userId },
       update: {
         spotify_token: req.tokens.access_token,
         spotify_refresh_token: req.tokens.refresh_token,
+        spotify_token_expires_at: now,
       },
       create: {
         name: userId,
         spotify_token: req.tokens.access_token,
         spotify_refresh_token: req.tokens.refresh_token,
+        spotify_token_expires_at: now,
       },
     });
 

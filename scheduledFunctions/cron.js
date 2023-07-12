@@ -52,9 +52,31 @@ exports.initScheduledJobs = () => {
               },
             },
           });
-          console.log(`Played next song: ${nextSong.name}`);
+          console.log(`Played next song`);
         } else {
           console.log(`The queue is empty, no song to play.`);
+
+          // Get recommendations based on the last played song
+          const recommendations = await spotifyClient.getRecommendations({
+            seed_tracks: [track.id],
+            min_energy: 0.4,
+            min_popularity: 50,
+            limit: 20,
+          });
+
+          if (recommendations.body.tracks.length > 0) {
+            // Select a random track from the recommendations
+            const randomIndex = Math.floor(Math.random() * recommendations.body.tracks.length);
+            const randomTrack = recommendations.body.tracks[randomIndex];
+
+            // Play the selected random track
+            await spotifyClient.play({ uris: [`spotify:track:${randomTrack.id}`] });
+            console.log(
+              `Played a random recommended song: '${randomTrack.name}' by '${randomTrack.artists[0].name}'`,
+            );
+          } else {
+            console.log(`No recommended tracks found.`);
+          }
         }
       } else {
         console.log(`The track '${track.name}' is still playing for event: ${event.id}`);
