@@ -33,7 +33,7 @@ async function getSpotifyClient(req, res, next) {
 
     let spotifyClient = spotifyApiContainer.getApiInstance(host.id);
     if (!spotifyClient) {
-      spotifyApiContainer.createApiInstance(host.id);
+      spotifyApiContainer.createApiInstance(host.id, process.env.SPOTIFY_REDIRECT_URI);
       spotifyClient = spotifyApiContainer.getApiInstance(host.id);
     }
 
@@ -47,7 +47,30 @@ async function getSpotifyClient(req, res, next) {
       return res.status(404).send('No events found for this host');
     }
 
-    spotifyClient.setAccessToken(host.spotify_token);
+    // Check if the token has expired
+    const now = new Date();
+    if (now > new Date(host.spotify_token_expires_at)) {
+      // If the token has expired, refresh it
+      try {
+        spotifyClient.setRefreshToken(host.spotify_refresh_token);
+        const data = await spotifyClient.refreshAccessToken();
+        const access_token = data.body['access_token'];
+
+        // Save the new access token back to the database
+        await prisma.user.update({
+          where: { name: hostName },
+          data: { spotify_token: access_token },
+        });
+
+        spotifyClient.setAccessToken(access_token);
+      } catch (err) {
+        console.error('Could not refresh access token', err);
+        return res.status(500).send('Could not refresh access token');
+      }
+    } else {
+      // If the token hasn't expired, continue with the existing token
+      spotifyClient.setAccessToken(host.spotify_token);
+    }
 
     req.spotifyClient = spotifyClient;
     next();
