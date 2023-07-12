@@ -170,7 +170,8 @@ const getCurrentlyPlaying = async (req, res, next) => {
     const currentlyPlaying = await req.spotifyClient.getMyCurrentPlaybackState();
 
     if (!currentlyPlaying.body.is_playing) {
-      return res.status(404).json({ error: 'No song is currently playing.' });
+      req.currentlyPlaying = { error: 'No song is currently playing.' };
+      return next();
     }
 
     req.currentlyPlaying = currentlyPlaying.body.item;
