@@ -332,13 +332,6 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
-    // const song = await prisma.song.create({
-    //   data: {
-    //     songId: track.id,
-    //     playlistId: event.playlistId,
-    //   },
-    // });
-
     const queueItem = await prisma.queue.create({
       data: {
         position: (await prisma.queue.count()) + 1,
@@ -356,10 +349,6 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
 
     console.log('event', event.playlist.spotify_id);
 
-    // await spotifyClient.addTracksToPlaylist(event.playlist.spotify_id, [
-    //   `spotify:track:${track.id}`,
-    // ]);
-
     console.log('Song added successfully');
     return res.status(200).json({
       message: 'Song added successfully',
@@ -370,48 +359,6 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
     return res.status(500).send('An error occurred while adding the song');
   }
 });
-
-// router.post('/:name/songs', getSpotifyClient, async (req, res) => {
-//   try {
-//     const { songID } = req.body;
-//     const hostName = req.params.name;
-
-//     const host = await prisma.user.findUnique({
-//       where: { name: hostName },
-//     });
-
-//     if (!host) {
-//       return res.status(404).json({ error: 'Host not found' });
-//     }
-
-//     const event = await prisma.event.findFirst({
-//       where: { hostId: host.id },
-//       include: { playlist: true },
-//     });
-
-//     if (!event) {
-//       return res.status(404).json({ error: 'Event not found for this host' });
-//     }
-
-//     const playlist = await prisma.playlist.findUnique({
-//       where: { id: event.playlistId },
-//       include: { songs: true },
-//     });
-
-//     const song = await prisma.song.create({
-//       data: {
-//         songId: songID,
-//         playlistId: playlist.id,
-//       },
-//     });
-
-//     console.log('Song added successfully');
-//     return res.status(200).json({ message: 'Song added successfully', song });
-//   } catch (error) {
-//     console.error('An error occurred while adding the song:', error);
-//     return res.status(500).send('An error occurred while adding the song');
-//   }
-// });
 
 router.get('/:name/tracks/:id', getSpotifyClient, async (req, res) => {
   const trackId = req.params.id;
@@ -427,6 +374,27 @@ router.get('/:name/tracks/:id', getSpotifyClient, async (req, res) => {
   } catch (err) {
     console.error('Something went wrong!', err);
     return res.status(500).send('Something went wrong');
+  }
+});
+
+router.get('/:name/search/:query', getSpotifyClient, async (req, res) => {
+  const query = req.params.query;
+
+  try {
+    const { body } = await req.spotifyClient.search(query, ['track', 'album', 'artist']);
+
+    if (!body.tracks.total && !body.albums.total && !body.artists.total) {
+      return res.status(404).send('No results found with the given query.');
+    }
+
+    res.json({
+      tracks: body.tracks.items,
+      albums: body.albums.items,
+      artists: body.artists.items,
+    });
+  } catch (err) {
+    console.error('Error searching for tracks, albums, or artists:', err);
+    return res.status(500).send('Error searching for tracks, albums, or artists');
   }
 });
 
