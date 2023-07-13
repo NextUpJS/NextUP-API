@@ -1,10 +1,11 @@
+require('dotenv').config();
 const CronJob = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const SpotifyWebApi = require('spotify-web-api-node');
 
 exports.initScheduledJobs = () => {
-  const scheduledJobFunction = CronJob.schedule('* * * * * *', async () => {
+  const scheduledJobFunction = CronJob.schedule(process.env.CRON_TIME, async () => {
     const events = await prisma.event.findMany({
       include: {
         playlist: {
