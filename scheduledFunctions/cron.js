@@ -24,6 +24,23 @@ exports.initScheduledJobs = () => {
     });
 
     for (const event of events) {
+      const now = new Date();
+      const lastPlayed = new Date(event.last_queue_item_added);
+      const differenceInMinutes = (now - lastPlayed) / 1000 / 60;
+
+      if (differenceInMinutes > 60) {
+        await prisma.event.update({
+          where: { id: event.id },
+          data: {
+            active: false,
+          },
+        });
+        console.log(
+          `Event ${event.id} has been inactive for more than 60 minutes. Set active to false.`,
+        );
+        continue;
+      }
+
       spotifyClient.setAccessToken(event.host.spotify_token);
 
       const playbackState = await spotifyClient.getMyCurrentPlaybackState();

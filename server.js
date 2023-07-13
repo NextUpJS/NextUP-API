@@ -8,10 +8,10 @@ const spotifyRoutes = require('./routes/spotifyRoutes');
 const scheduledFunctions = require('./scheduledFunctions/cron');
 
 const app = express();
-const morgan = require('morgan');
+//const morgan = require('morgan');
 
 app.use(express.json());
-app.use(morgan('combined'));
+//app.use(morgan('combined'));
 
 const allowedOrigins = ['https://nextup.rocks', 'http://localhost:3000'];
 
