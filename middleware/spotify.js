@@ -144,41 +144,37 @@ const getUserData = async (req, res, next) => {
 
 const createPlaylist = async (req, res, next) => {
   try {
-    const data = await spotifyApi.createPlaylist(`NextUp - ${req.userId}`, {
-      description: 'nextup.rocks',
-      public: false,
-    });
-
-    let playListId = data.body['id'];
-
-    // const existingPlaylist = await prisma.playlist.findFirst({
-    //   where: { name: playlistName },
-    // });
-
-    const playlist = await prisma.playlist.create({
-      data: { spotify_id: playListId },
-    });
-
     const existingEvent = await prisma.event.findFirst({
       where: { hostId: req.updatedUser.id },
+      include: { playlist: true },
     });
 
-    if (existingEvent) {
-      // Update event
-      await prisma.event.update({
-        where: { id: existingEvent.id },
-        data: {
-          playlist: { connect: { id: playlist.id } },
-        },
-      });
+    if (existingEvent && existingEvent.playlist) {
+      // Event already has a playlist
+      console.log(`Event already has a playlist: ${existingEvent.playlist.id}`);
     } else {
-      // Create event
-      await prisma.event.create({
-        data: {
-          host: { connect: { id: req.updatedUser.id } },
-          playlist: { connect: { id: playlist.id } },
-        },
+      // Create playlist and update or create event with new playlist
+      const playlist = await prisma.playlist.create({
+        data: {},
       });
+
+      if (existingEvent) {
+        // Update event
+        await prisma.event.update({
+          where: { id: existingEvent.id },
+          data: {
+            playlist: { connect: { id: playlist.id } },
+          },
+        });
+      } else {
+        // Create event
+        await prisma.event.create({
+          data: {
+            host: { connect: { id: req.updatedUser.id } },
+            playlist: { connect: { id: playlist.id } },
+          },
+        });
+      }
     }
 
     next();
