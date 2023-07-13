@@ -38,7 +38,7 @@ model Playlist {
   songs      Song[]
   events     Event[]
   queue      Queue[]
-  spotify_id String
+  spotify_id String?
 }
 
 model Queue {
