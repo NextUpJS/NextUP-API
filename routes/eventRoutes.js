@@ -347,6 +347,13 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
+    const updatedEvent = await prisma.event.update({
+      where: { id: event.id },
+      data: {
+        last_queue_item_added: new Date(),
+      },
+    });
+
     console.log('event', event.playlist.spotify_id);
 
     // await spotifyClient.addTracksToPlaylist(event.playlist.spotify_id, [
