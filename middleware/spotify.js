@@ -153,7 +153,7 @@ const createPlaylist = async (req, res, next) => {
       // Event already has a playlist
       console.log(`Event already has a playlist: ${existingEvent.playlist.id}`);
     } else {
-      // Create playlist and update or create event with new playlist
+      // Create a playlist
       const playlist = await prisma.playlist.create({
         data: {},
       });
@@ -163,15 +163,16 @@ const createPlaylist = async (req, res, next) => {
         await prisma.event.update({
           where: { id: existingEvent.id },
           data: {
-            playlist: { connect: { id: playlist.id } },
+            playlistId: playlist.id,
           },
         });
       } else {
         // Create event
         await prisma.event.create({
           data: {
-            host: { connect: { id: req.updatedUser.id } },
-            playlist: { connect: { id: playlist.id } },
+            hostId: req.updatedUser.id,
+            playlistId: playlist.id,
+            active: true, // or set this to the value you want
           },
         });
       }
