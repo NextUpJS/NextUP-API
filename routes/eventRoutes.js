@@ -59,6 +59,55 @@ router.get('/:name/pause', getSpotifyClient, async (req, res) => {
   }
 });
 
+router.get('/:name/start', getSpotifyClient, async (req, res) => {
+  const hostName = req.params.name;
+
+  try {
+    const host = await prisma.user.findUnique({
+      where: { name: hostName },
+    });
+
+    if (!host) {
+      return res.status(404).json({ error: 'Host not found' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: { hostId: host.id },
+      include: { playlist: true },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found for this host' });
+    }
+
+    const playlist = await prisma.playlist.findUnique({
+      where: { id: event.playlistId },
+      include: { queue: true },
+    });
+
+    if (!playlist) {
+      return res.status(404).json({ error: 'Playlist not found for this host' });
+    }
+
+    if (playlist.queue.length === 0) {
+      return res.status(404).json({ error: 'Queue is empty' });
+    }
+
+    const firstSongInQueue = playlist.queue[0];
+
+    const trackToPlay = `spotify:track:${firstSongInQueue.trackId}`;
+
+    await req.spotifyClient.play({
+      uris: [trackToPlay],
+    });
+
+    res.send('Playing first track in queue successfully');
+  } catch (err) {
+    console.error('Something went wrong!', err);
+    return res.status(500).send('Something went wrong');
+  }
+});
+
 router.get('/:name/now-playing', getSpotifyClient, async (req, res) => {
   try {
     const data = await req.spotifyClient.getMyCurrentPlaybackState();
