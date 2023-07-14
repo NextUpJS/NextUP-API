@@ -141,7 +141,6 @@ exports.initScheduledJobs = () => {
         }
       }
 
-      console.log(`Queue: ${JSON.stringify(event.playlist.queue, null, 2)}`);
       if (!track) {
         console.log(`There's no currently playing track for event: ${event.id}`);
       } else if (
