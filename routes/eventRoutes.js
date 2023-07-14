@@ -108,6 +108,62 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
   }
 });
 
+router.get('/:name/next', getSpotifyClient, async (req, res) => {
+  const hostName = req.params.name;
+
+  try {
+    const host = await prisma.user.findUnique({
+      where: { name: hostName },
+    });
+
+    if (!host) {
+      return res.status(404).json({ error: 'Host not found' });
+    }
+
+    const event = await prisma.event.findFirst({
+      where: { hostId: host.id },
+      include: { playlist: true },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found for this host' });
+    }
+
+    const playlist = await prisma.playlist.findUnique({
+      where: { id: event.playlistId },
+      include: { queue: true },
+    });
+
+    if (!playlist) {
+      return res.status(404).json({ error: 'Playlist not found for this host' });
+    }
+
+    if (playlist.queue.length < 2) {
+      return res.status(404).json({ error: 'Queue does not have next song' });
+    }
+
+    // Remove the current song from the queue
+    const currentSongInQueue = playlist.queue[0];
+    await prisma.queue.delete({
+      where: { id: currentSongInQueue.id },
+    });
+
+    // Play the next song in the queue
+    const nextSongInQueue = playlist.queue[1];
+
+    const trackToPlay = `spotify:track:${nextSongInQueue.trackId}`;
+
+    await req.spotifyClient.play({
+      uris: [trackToPlay],
+    });
+
+    res.send('Playing next track in queue successfully');
+  } catch (err) {
+    console.error('Something went wrong!', err);
+    return res.status(500).send('Something went wrong');
+  }
+});
+
 router.get('/:name/now-playing', getSpotifyClient, async (req, res) => {
   try {
     const data = await req.spotifyClient.getMyCurrentPlaybackState();
