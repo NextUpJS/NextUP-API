@@ -138,23 +138,23 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       return res.status(404).json({ error: 'Playlist not found for this host' });
     }
 
-    if (playlist.queue.length < 2) {
+    if (playlist.queue.length < 1) {
       return res.status(404).json({ error: 'Queue does not have next song' });
     }
 
-    // Remove the current song from the queue
-    const currentSongInQueue = playlist.queue[0];
-    await prisma.queue.delete({
-      where: { id: currentSongInQueue.id },
-    });
-
     // Play the next song in the queue
-    const nextSongInQueue = playlist.queue[1];
+    const nextSongInQueue = playlist.queue[0];
 
     const trackToPlay = `spotify:track:${nextSongInQueue.trackId}`;
 
     await req.spotifyClient.play({
       uris: [trackToPlay],
+    });
+
+    // Remove the current song from the queue
+    const currentSongInQueue = playlist.queue[0];
+    await prisma.queue.delete({
+      where: { id: currentSongInQueue.id },
     });
 
     res.send('Playing next track in queue successfully');
