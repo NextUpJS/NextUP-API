@@ -169,6 +169,9 @@ router.get('/:name/playlist', async (req, res) => {
   const currentlyPlaying = {
     name: event.playingTrack?.name,
     album: {
+      name: event.playingTrack?.Album?.name,
+    },
+    artist: {
       name: event.playingTrack?.Album?.Artist?.name,
     },
   };
