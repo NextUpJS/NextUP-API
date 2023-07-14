@@ -35,6 +35,10 @@ exports.initScheduledJobs = () => {
       const lastPlayed = new Date(event.last_queue_item_added);
       const differenceInMinutes = (now - lastPlayed) / 1000 / 60;
 
+      if (!event.active) {
+        continue;
+      }
+
       if (differenceInMinutes > 60) {
         await prisma.event.update({
           where: { id: event.id },
