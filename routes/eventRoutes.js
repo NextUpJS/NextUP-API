@@ -135,7 +135,7 @@ router.get('/:name/resume', getSpotifyClient, async (req, res) => {
   }
 });
 
-router.get('/:name/playlist', getSpotifyClient, getCurrentlyPlaying, async (req, res) => {
+router.get('/:name/playlist', async (req, res) => {
   const hostName = req.params.name;
 
   const host = await prisma.user.findUnique({
@@ -148,12 +148,13 @@ router.get('/:name/playlist', getSpotifyClient, getCurrentlyPlaying, async (req,
 
   const event = await prisma.event.findFirst({
     where: { hostId: host.id },
-    include: { playlist: true },
+    include: {
+      playlist: true,
+      playingTrack: {
+        include: { Album: { include: { Artist: true } } },
+      },
+    },
   });
-
-  if (!event) {
-    return res.status(404).json({ error: 'Event not found for this host' });
-  }
 
   const playlist = await prisma.playlist.findUnique({
     where: { id: event.playlistId },
@@ -161,7 +162,18 @@ router.get('/:name/playlist', getSpotifyClient, getCurrentlyPlaying, async (req,
     include: { queue: { include: { Track: { include: { Album: true, Artist: true } } } } },
   });
 
-  res.json({ playlist, currentlyPlaying: req.currentlyPlaying });
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found for this host' });
+  }
+
+  const currentlyPlaying = {
+    name: event.playingTrack?.name,
+    album: {
+      name: event.playingTrack?.Album?.Artist?.name,
+    },
+  };
+
+  res.json({ playlist: playlist, currentlyPlaying });
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {

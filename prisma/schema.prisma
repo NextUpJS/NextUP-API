@@ -27,6 +27,8 @@ model Event {
   playlist              Playlist @relation(fields: [playlistId], references: [id])
   playlistId            Int      @default(0)
   isPlaying             Boolean  @default(false)
+  playingTrackId        String   @default("")
+  playingTrack          Track?   @relation(fields: [playingTrackId], references: [id])
   active                Boolean  @default(false)
   last_queue_item_added DateTime @default(now())
 }
@@ -117,4 +119,5 @@ model Track {
   Artist      Artist  @relation(fields: [artistId], references: [id])
   artistId    String
   queue       Queue[]
+  Event       Event[]
 }
