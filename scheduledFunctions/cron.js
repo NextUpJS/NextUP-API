@@ -1,7 +1,14 @@
 require('dotenv').config();
 const CronJob = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: [
+    { emit: 'event', level: 'query' },
+    { emit: 'event', level: 'info' },
+    { emit: 'event', level: 'warn' },
+    { emit: 'event', level: 'error' },
+  ],
+});
 const SpotifyWebApi = require('spotify-web-api-node');
 
 exports.initScheduledJobs = () => {
@@ -44,8 +51,96 @@ exports.initScheduledJobs = () => {
       spotifyClient.setAccessToken(event.host.spotify_token);
 
       const playbackState = await spotifyClient.getMyCurrentPlaybackState();
-
       const track = playbackState.body.item;
+
+      if (track) {
+        try {
+          const currentEvent = await prisma.event.findUnique({ where: { id: event.id } });
+          // Update the currently playing track in the event
+
+          // Check if the track and artist exist in the database
+          let trackInDb = await prisma.track.findUnique({ where: { id: track.id } });
+          let artistInDb = await prisma.artist.findUnique({ where: { id: track.artists[0].id } });
+          let albumInDb = await prisma.album.findUnique({ where: { id: track.album.id } });
+
+          // If the artist doesn't exist, add it
+          if (!artistInDb && track.artists[0]) {
+            artistInDb = await prisma.artist.create({
+              data: {
+                id: track.artists[0].id,
+                name: track.artists[0].name,
+                href: track.artists[0].href,
+                spotifyUrl: track.artists[0].external_urls.spotify,
+                uri: track.artists[0].uri,
+                artistType: track.artists[0].type,
+              },
+            });
+            console.log(`Added artist '${artistInDb.name}' to the database.`);
+          }
+
+          if (!albumInDb) {
+            albumInDb = await prisma.album.create({
+              data: {
+                id: track.album.id,
+                albumType: track.album.album_type,
+                externalSpotifyUrl: track.album.external_urls.spotify,
+                href: track.album.href,
+                name: track.album.name,
+                releaseDate: track.album.release_date,
+                releaseDatePrecision: track.album.release_date_precision,
+                totalTracks: track.album.total_tracks,
+                uri: track.album.uri,
+                // Add other album properties if necessary
+                Artist: {
+                  connect: { id: track.artists[0].id }, // Connect the album to its artist
+                },
+              },
+            });
+            console.log(`Added album '${albumInDb.name}' to the database.`);
+          }
+
+          // If the track doesn't exist, add it
+          if (!trackInDb) {
+            trackInDb = await prisma.track.create({
+              data: {
+                id: track.id,
+                name: track.name,
+                discNumber: track.disc_number,
+                durationMs: track.duration_ms,
+                explicit: track.explicit,
+                isrc: track.external_ids.isrc,
+                externalUrl: track.external_urls.spotify,
+                href: track.href,
+                isLocal: track.is_local,
+                popularity: track.popularity,
+                previewUrl: track.preview_url,
+                trackNumber: track.track_number,
+                trackType: track.type,
+                uri: track.uri,
+                albumId: track.album.id,
+                artistId: track.artists[0].id,
+                // Add other track properties if necessary
+              },
+            });
+            console.log(`Added track '${trackInDb.name}' to the database.`);
+          }
+
+          if (currentEvent.playingTrackId !== track.id) {
+            await prisma.event.update({
+              where: { id: event.id },
+              data: {
+                playingTrackId: track.id,
+              },
+            });
+            console.log(`Updated playingTrackId to '${track.id}' for event: ${event.id}`);
+          }
+        } catch (error) {
+          console.error('Error occurred:', error);
+          // You can log the error to a file or a centralized logging system
+          // for better error tracking and debugging.
+        }
+      }
+
       console.log(`Queue: ${JSON.stringify(event.playlist.queue, null, 2)}`);
       if (!track) {
         console.log(`There's no currently playing track for event: ${event.id}`);
