@@ -47,6 +47,20 @@ router.get('/:name', async (req, res) => {
   }
 });
 
+router.get('/:name/devices', getSpotifyClient, async (req, res) => {
+  try {
+    const devices = await req.spotifyClient.getMyDevices();
+
+    if (devices.body.devices.length > 0) {
+      res.json(devices.body.devices);
+    } else {
+      res.json({ message: 'No devices found for the user' });
+    }
+  } catch (err) {
+    console.error('Something went wrong!', err);
+    return res.status(500).send('Something went wrong');
+  }
+});
 router.get('/:name/pause', getSpotifyClient, async (req, res) => {
   try {
     await req.spotifyClient.pause();
@@ -91,6 +105,13 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
 
     if (playlist.queue.length === 0) {
       return res.status(404).json({ error: 'Queue is empty' });
+    }
+
+    const devices = await req.spotifyClient.getMyDevices();
+    const activeDevice = devices.body.devices.find((device) => device.is_active);
+
+    if (!activeDevice) {
+      return res.status(400).send('No active device. Please ensure a device is active.');
     }
 
     const firstSongInQueue = playlist.queue[0];
