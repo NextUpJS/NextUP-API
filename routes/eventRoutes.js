@@ -76,6 +76,7 @@ router.get('/:name/pause', getSpotifyClient, async (req, res) => {
 router.get('/:name/start', getSpotifyClient, async (req, res) => {
   const hostName = req.params.name;
   const deviceId = req.query.deviceId; // Extract deviceId from query parameter
+  console.log(deviceId);
 
   try {
     const host = await prisma.user.findUnique({
