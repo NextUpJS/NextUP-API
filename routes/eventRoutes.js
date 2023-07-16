@@ -75,6 +75,7 @@ router.get('/:name/pause', getSpotifyClient, async (req, res) => {
 
 router.get('/:name/start', getSpotifyClient, async (req, res) => {
   const hostName = req.params.name;
+  const deviceId = req.query.deviceId; // Extract deviceId from query parameter
 
   try {
     const host = await prisma.user.findUnique({
@@ -111,8 +112,13 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
 
     const trackToPlay = `spotify:track:${firstSongInQueue.trackId}`;
 
+    // Transfer playback to selected device
+    await req.spotifyClient.transferMyPlayback([deviceId]);
+
+    // Then start playing on the now active device
     await req.spotifyClient.play({
       uris: [trackToPlay],
+      deviceId: deviceId,
     });
 
     await prisma.queue.delete({
