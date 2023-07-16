@@ -115,7 +115,7 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       uris: [trackToPlay],
     });
 
-    await prisma.song.delete({
+    await prisma.queue.delete({
       where: { id: firstSongInQueue.id },
     });
 
