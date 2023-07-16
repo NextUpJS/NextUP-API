@@ -107,13 +107,6 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       return res.status(404).json({ error: 'Queue is empty' });
     }
 
-    const devices = await req.spotifyClient.getMyDevices();
-    const activeDevice = devices.body.devices.find((device) => device.is_active);
-
-    if (!activeDevice) {
-      return res.status(400).send('No active device. Please ensure a device is active.');
-    }
-
     const firstSongInQueue = playlist.queue[0];
 
     const trackToPlay = `spotify:track:${firstSongInQueue.trackId}`;
