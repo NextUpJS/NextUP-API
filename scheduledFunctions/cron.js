@@ -1,14 +1,7 @@
 require('dotenv').config();
 const CronJob = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient({
-  log: [
-    { emit: 'event', level: 'query' },
-    { emit: 'event', level: 'info' },
-    { emit: 'event', level: 'warn' },
-    { emit: 'event', level: 'error' },
-  ],
-});
+const prisma = new PrismaClient({});
 const SpotifyWebApi = require('spotify-web-api-node');
 
 exports.initScheduledJobs = () => {
@@ -181,11 +174,28 @@ exports.initScheduledJobs = () => {
             const randomIndex = Math.floor(Math.random() * recommendations.body.tracks.length);
             const randomTrack = recommendations.body.tracks[randomIndex];
 
-            // Play the selected random track
-            await spotifyClient.play({ uris: [`spotify:track:${randomTrack.id}`] });
-            console.log(
-              `Played a random recommended song: '${randomTrack.name}' by '${randomTrack.artists[0].name}'`,
-            );
+            // Retrieve the last_random_song_attempt for the event
+            const lastRandomSongAttempt = new Date(event.last_random_song_attempt);
+            const now = new Date();
+
+            // Check if at least 5 seconds have passed since the last attempt
+            if (now.getTime() - lastRandomSongAttempt.getTime() >= 5000) {
+              // Play the selected random track
+              await spotifyClient.play({ uris: [`spotify:track:${randomTrack.id}`] });
+              console.log(
+                `Played a random recommended song: '${randomTrack.name}' by '${randomTrack.artists[0].name}'`,
+              );
+
+              // Update the last_random_song_attempt in the event
+              await prisma.event.update({
+                where: { id: event.id },
+                data: { last_random_song_attempt: now },
+              });
+            } else {
+              console.log(
+                `Less than 5 seconds have passed since the last attempt. Not playing a new song.`,
+              );
+            }
           } else {
             console.log(`No recommended tracks found.`);
           }

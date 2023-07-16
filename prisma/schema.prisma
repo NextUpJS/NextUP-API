@@ -19,18 +19,19 @@ model User {
 }
 
 model Event {
-  id                    Int      @id @default(autoincrement())
-  created_at            DateTime @default(now())
-  updated_at            DateTime @updatedAt
-  host                  User     @relation(fields: [hostId], references: [id])
-  hostId                Int
-  playlist              Playlist @relation(fields: [playlistId], references: [id])
-  playlistId            Int      @default(0)
-  isPlaying             Boolean  @default(false)
-  playingTrackId        String   @default("")
-  playingTrack          Track?   @relation(fields: [playingTrackId], references: [id])
-  active                Boolean  @default(false)
-  last_queue_item_added DateTime @default(now())
+  id                       Int      @id @default(autoincrement())
+  created_at               DateTime @default(now())
+  updated_at               DateTime @updatedAt
+  host                     User     @relation(fields: [hostId], references: [id])
+  hostId                   Int
+  playlist                 Playlist @relation(fields: [playlistId], references: [id])
+  playlistId               Int      @default(0)
+  isPlaying                Boolean  @default(false)
+  playingTrackId           String   @default("")
+  playingTrack             Track?   @relation(fields: [playingTrackId], references: [id])
+  active                   Boolean  @default(false)
+  last_queue_item_added    DateTime @default(now())
+  last_random_song_attempt DateTime @default(now())
 }
 
 model Playlist {
