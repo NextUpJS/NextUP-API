@@ -115,7 +115,11 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       uris: [trackToPlay],
     });
 
-    res.send('Playing first track in queue successfully');
+    await prisma.song.delete({
+      where: { id: firstSongInQueue.id },
+    });
+
+    res.send('Playing first track in queue successfully and removing it from the queue');
   } catch (err) {
     console.error('Something went wrong!', err);
     return res.status(500).send('Something went wrong');
