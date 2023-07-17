@@ -159,7 +159,7 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gt: 0 } },
+          where: { position: { gte: 0 } },
         },
       },
     });
@@ -364,7 +364,7 @@ router.get('/:name/playlist', async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gte: 0 } },
+          where: { position: { gt: 0 } }, // Only include tracks with position > 0
           include: {
             Track: {
               include: {
@@ -398,60 +398,59 @@ router.get('/:name/playlist', async (req, res) => {
   }
 });
 
-router.post('/:username/playlist/reorder', async (req, res) => {
-  const userName = req.params.username;
+router.post('/:name/playlist/reorder', async (req, res) => {
+  const hostName = req.params.name;
   const { fromIndex, toIndex } = req.body;
 
-  const user = await prisma.user.findUnique({
-    where: { name: userName },
+  const host = await prisma.user.findUnique({
+    where: { name: hostName },
   });
 
-  if (!user) {
-    return res.status(404).json({ error: 'User not found' });
+  if (!host) {
+    return res.status(404).json({ error: 'Host not found' });
   }
 
   const event = await prisma.event.findFirst({
-    where: { hostId: user.id },
+    where: { hostId: host.id },
+    include: {
+      playlist: true,
+      playingTrack: {
+        include: { Album: { include: { Artist: true } } },
+      },
+    },
   });
 
   if (!event) {
-    return res.status(404).json({ error: 'Event not found for this user' });
+    return res.status(404).json({ error: 'Event not found for this host' });
   }
 
-  const queueItems = await prisma.queue.findMany({
+  let tracks = await prisma.queue.findMany({
     where: { playlistId: event.playlistId },
     orderBy: { position: 'asc' },
   });
 
-  if (
-    fromIndex >= queueItems.length ||
-    toIndex >= queueItems.length ||
-    fromIndex < 0 ||
-    toIndex < 0
-  ) {
+  if (fromIndex >= tracks.length || toIndex >= tracks.length || fromIndex < 0 || toIndex < 0) {
     res.status(400).json({ message: 'Invalid fromIndex or toIndex.' });
     return;
   }
 
-  const [movedItem] = queueItems.splice(fromIndex, 1);
-  queueItems.splice(toIndex, 0, movedItem);
+  const reorderedTrack = tracks.splice(fromIndex, 1)[0];
+  tracks.splice(toIndex, 0, reorderedTrack);
 
-  try {
-    const trackUpdates = queueItems.map((item, index) =>
-      prisma.queue.update({
-        where: { id: item.id },
-        data: { position: item.position < 0 ? item.position : index },
-      }),
-    );
+  tracks = await prisma.$transaction(
+    tracks
+      .map((track, index) =>
+        index >= 0
+          ? prisma.queue.update({
+              where: { id: track.id },
+              data: { position: index },
+            })
+          : null,
+      )
+      .filter(Boolean),
+  );
 
-    await prisma.$transaction(trackUpdates);
-
-    return res.status(200).json({ message: 'Playlist reordered successfully.' });
-  } catch (error) {
-    return res
-      .status(500)
-      .json({ error: `An error occurred while updating the playlist: ${error.message}` });
-  }
+  res.status(200).json({ message: 'Playlist reordered successfully.' });
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
