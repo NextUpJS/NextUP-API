@@ -122,8 +122,9 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       deviceId: deviceId,
     });
 
-    await prisma.queue.delete({
+    await prisma.queue.update({
       where: { id: firstSongInQueue.id },
+      data: { position: -firstSongInQueue.position },
     });
 
     res.send('Playing first track in queue successfully and removing it from the queue');
@@ -156,7 +157,11 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
 
     const playlist = await prisma.playlist.findUnique({
       where: { id: event.playlistId },
-      include: { queue: true },
+      include: {
+        queue: {
+          where: { position: { gte: 0 } },
+        },
+      },
     });
 
     if (!playlist) {
@@ -176,10 +181,10 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       uris: [trackToPlay],
     });
 
-    // Remove the current song from the queue
-    const currentSongInQueue = playlist.queue[0];
-    await prisma.queue.delete({
-      where: { id: currentSongInQueue.id },
+    // Mark the current song as played by setting its position to a negative number
+    await prisma.queue.update({
+      where: { id: nextSongInQueue.id },
+      data: { position: -Math.abs(nextSongInQueue.position) },
     });
 
     res.send('Playing next track in queue successfully');
@@ -239,8 +244,19 @@ router.get('/:name/playlist', async (req, res) => {
 
   const playlist = await prisma.playlist.findUnique({
     where: { id: event.playlistId },
-    include: { queue: true },
-    include: { queue: { include: { Track: { include: { Album: true, Artist: true } } } } },
+    include: {
+      queue: {
+        where: { position: { gt: 0 } }, // Only include tracks with position > 0
+        include: {
+          Track: {
+            include: {
+              Album: true,
+              Artist: true,
+            },
+          },
+        },
+      },
+    },
   });
 
   if (!event) {
