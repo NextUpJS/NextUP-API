@@ -159,7 +159,7 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gte: 0 } },
+          where: { position: { gt: 0 } },
           orderBy: { position: 'asc' },
         },
       },
