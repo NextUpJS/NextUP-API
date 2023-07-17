@@ -440,7 +440,7 @@ router.post('/:name/playlist/reorder', async (req, res) => {
   tracks = await prisma.$transaction(
     tracks
       .map((track, index) =>
-        index >= 0
+        track.position >= 0
           ? prisma.queue.update({
               where: { id: track.id },
               data: { position: index },
