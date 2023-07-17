@@ -398,47 +398,52 @@ router.get('/:name/playlist', async (req, res) => {
   }
 });
 
-router.post('/:name/playlist/reorder', async (req, res) => {
-  const hostName = req.params.name;
-  const { fromIndex, toIndex } = req.body;
+router.post('/:username/playlist/reorder', async (req, res) => {
+  const userName = req.params.username;
+  const { originIndex, destinationIndex } = req.body;
 
-  const host = await prisma.user.findUnique({
-    where: { name: hostName },
+  const user = await prisma.user.findUnique({
+    where: { name: userName },
   });
 
-  if (!host) {
-    return res.status(404).json({ error: 'Host not found' });
+  if (!user) {
+    return res.status(404).json({ error: 'User not located' });
   }
 
-  const event = await prisma.event.findFirst({
-    where: { hostId: host.id },
+  const occasion = await prisma.event.findFirst({
+    where: { hostId: user.id },
     include: {
       playlist: true,
-      playingTrack: {
+      currentTrack: {
         include: { Album: { include: { Artist: true } } },
       },
     },
   });
 
-  if (!event) {
-    return res.status(404).json({ error: 'Event not found for this host' });
+  if (!occasion) {
+    return res.status(404).json({ error: 'Occasion not discovered for this user' });
   }
 
-  let tracks = await prisma.queue.findMany({
-    where: { playlistId: event.playlistId },
+  let musicTracks = await prisma.queue.findMany({
+    where: { playlistId: occasion.playlistId },
     orderBy: { position: 'asc' },
   });
 
-  if (fromIndex >= tracks.length || toIndex >= tracks.length || fromIndex < 0 || toIndex < 0) {
-    res.status(400).json({ message: 'Invalid fromIndex or toIndex.' });
+  if (
+    originIndex >= musicTracks.length ||
+    destinationIndex >= musicTracks.length ||
+    originIndex < 0 ||
+    destinationIndex < 0
+  ) {
+    res.status(400).json({ message: 'Unacceptable originIndex or destinationIndex.' });
     return;
   }
 
-  const reorderedTrack = tracks.splice(fromIndex, 1)[0];
-  tracks.splice(toIndex, 0, reorderedTrack);
+  const relocatedTrack = musicTracks.splice(originIndex, 1)[0];
+  musicTracks.splice(destinationIndex, 0, relocatedTrack);
 
-  tracks = await prisma.$transaction(
-    tracks.map((track, index) =>
+  musicTracks = await prisma.$transaction(
+    musicTracks.map((track, index) =>
       prisma.queue.update({
         where: { id: track.id },
         data: { position: index },
@@ -446,7 +451,7 @@ router.post('/:name/playlist/reorder', async (req, res) => {
     ),
   );
 
-  res.status(200).json({ message: 'Playlist reordered successfully.' });
+  res.status(200).json({ message: 'Playlist rearranged successfully.' });
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
