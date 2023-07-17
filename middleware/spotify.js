@@ -134,7 +134,7 @@ const getUserData = async (req, res, next) => {
     });
 
     req.userId = userId;
-    req.updatedUser = updatedUser;
+    req.updatedUser = updatedUser; // Ensure this line is included
     next();
   } catch (err) {
     console.error('Error getting user ID:', err);
@@ -144,19 +144,32 @@ const getUserData = async (req, res, next) => {
 
 const createPlaylist = async (req, res, next) => {
   try {
+    const userExists = await prisma.user.findUnique({
+      where: { id: req.updatedUser.id },
+    });
+
+    if (!userExists) {
+      return res.status(400).send(`User with id: ${req.updatedUser.id} does not exist`);
+    }
+
     const existingEvent = await prisma.event.findFirst({
       where: { hostId: req.updatedUser.id },
       include: { playlist: true },
     });
 
+    let playlistId;
+
     if (existingEvent && existingEvent.playlist) {
       // Event already has a playlist
       console.log(`Event already has a playlist: ${existingEvent.playlist.id}`);
+      playlistId = existingEvent.playlist.id;
     } else {
       // Create a playlist
       const playlist = await prisma.playlist.create({
         data: {},
       });
+
+      playlistId = playlist.id;
 
       if (existingEvent) {
         // Update event
@@ -166,16 +179,20 @@ const createPlaylist = async (req, res, next) => {
             playlistId: playlist.id,
           },
         });
-      } else {
-        // Create event
-        await prisma.event.create({
-          data: {
-            hostId: req.updatedUser.id,
-            playlistId: playlist.id,
-            active: true, // or set this to the value you want
-          },
-        });
       }
+    }
+
+    if (!existingEvent && playlistId) {
+      // Create event
+      console.log('host: ', req.updatedUser.id);
+      console.log('playlist: ', playlistId);
+      await prisma.event.create({
+        data: {
+          hostId: req.updatedUser.id,
+          playlistId: playlistId,
+          active: true, // or set this to the value you want
+        },
+      });
     }
 
     next();
