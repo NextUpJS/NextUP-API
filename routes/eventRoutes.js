@@ -331,58 +331,71 @@ router.post('/:name/export', getSpotifyClient, async (req, res) => {
 });
 
 router.get('/:name/playlist', async (req, res) => {
-  const hostName = req.params.name;
+  try {
+    const hostName = req.params.name;
 
-  const host = await prisma.user.findUnique({
-    where: { name: hostName },
-  });
+    const host = await prisma.user.findUnique({
+      where: { name: hostName },
+    });
 
-  if (!host) {
-    return res.status(404).json({ error: 'Host not found' });
-  }
+    if (!host) {
+      return res.status(404).json({ error: 'Host not found' });
+    }
 
-  const event = await prisma.event.findFirst({
-    where: { hostId: host.id },
-    include: {
-      playlist: true,
-      playingTrack: {
-        include: { Album: { include: { Artist: true } } },
+    const event = await prisma.event.findFirst({
+      where: { hostId: host.id },
+      include: {
+        playlist: true,
+        playingTrack: {
+          include: { Album: { include: { Artist: true } } },
+        },
       },
-    },
-  });
+    });
 
-  const playlist = await prisma.playlist.findUnique({
-    where: { id: event.playlistId },
-    include: {
-      queue: {
-        where: { position: { gt: 0 } }, // Only include tracks with position > 0
-        include: {
-          Track: {
-            include: {
-              Album: true,
-              Artist: true,
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found for this host' });
+    }
+
+    if (!event.playlist || !event.playingTrack) {
+      return res.status(404).json({ error: 'Playlist or Playing Track not found for this event' });
+    }
+
+    const playlist = await prisma.playlist.findUnique({
+      where: { id: event.playlistId },
+      include: {
+        queue: {
+          where: { position: { gte: 0 } },
+          include: {
+            Track: {
+              include: {
+                Album: true,
+                Artist: true,
+              },
             },
           },
         },
       },
-    },
-  });
+    });
 
-  if (!event) {
-    return res.status(404).json({ error: 'Event not found for this host' });
+    if (!playlist) {
+      return res.status(404).json({ error: 'Playlist not found' });
+    }
+
+    const currentlyPlaying = {
+      name: event.playingTrack?.name,
+      album: {
+        name: event.playingTrack?.Album?.name,
+      },
+      artist: {
+        name: event.playingTrack?.Album?.Artist?.name,
+      },
+    };
+
+    res.json({ playlist: playlist, currentlyPlaying });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'An error occurred while processing your request' });
   }
-
-  const currentlyPlaying = {
-    name: event.playingTrack?.name,
-    album: {
-      name: event.playingTrack?.Album?.name,
-    },
-    artist: {
-      name: event.playingTrack?.Album?.Artist?.name,
-    },
-  };
-
-  res.json({ playlist: playlist, currentlyPlaying });
 });
 
 router.post('/:name/playlist/reorder', async (req, res) => {
