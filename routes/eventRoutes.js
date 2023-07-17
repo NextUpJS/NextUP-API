@@ -260,11 +260,61 @@ router.get('/:name/playlist', async (req, res) => {
   res.json({ playlist: playlist, currentlyPlaying });
 });
 
-router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
-  const hostName = req.params.name; // get the user name from request parameters
-  const queueId = parseInt(req.params.id); // get the queue id from request parameters
+router.post('/:name/playlist/reorder', async (req, res) => {
+  const hostName = req.params.name;
+  const { fromIndex, toIndex } = req.body;
 
-  // find user
+  const host = await prisma.user.findUnique({
+    where: { name: hostName },
+  });
+
+  if (!host) {
+    return res.status(404).json({ error: 'Host not found' });
+  }
+
+  const event = await prisma.event.findFirst({
+    where: { hostId: host.id },
+    include: {
+      playlist: true,
+      playingTrack: {
+        include: { Album: { include: { Artist: true } } },
+      },
+    },
+  });
+
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found for this host' });
+  }
+
+  let tracks = await prisma.queue.findMany({
+    where: { playlistId: event.playlistId },
+    orderBy: { position: 'asc' },
+  });
+
+  if (fromIndex >= tracks.length || toIndex >= tracks.length || fromIndex < 0 || toIndex < 0) {
+    res.status(400).json({ message: 'Invalid fromIndex or toIndex.' });
+    return;
+  }
+
+  const reorderedTrack = tracks.splice(fromIndex, 1)[0];
+  tracks.splice(toIndex, 0, reorderedTrack);
+
+  tracks = await prisma.$transaction(
+    tracks.map((track, index) =>
+      prisma.queue.update({
+        where: { id: track.id },
+        data: { position: index },
+      }),
+    ),
+  );
+
+  res.status(200).json({ message: 'Playlist reordered successfully.' });
+});
+
+router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
+  const hostName = req.params.name;
+  const queueId = parseInt(req.params.id);
+
   const user = await prisma.user.findUnique({
     where: { name: hostName },
   });
@@ -273,7 +323,6 @@ router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
     return res.status(404).send('User not found');
   }
 
-  // find event that the user hosts
   const event = await prisma.event.findFirst({
     where: { hostId: user.id },
   });
@@ -282,7 +331,6 @@ router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
     return res.status(404).send('Event not found for this user');
   }
 
-  // find queue in the playlist
   const queueInPlaylist = await prisma.queue.findFirst({
     where: {
       playlistId: event.playlistId,
@@ -294,7 +342,6 @@ router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
     return res.status(404).send('Queue not found in the user playlist');
   }
 
-  // delete queue from playlist
   await prisma.queue.delete({
     where: {
       id: queueInPlaylist.id,
