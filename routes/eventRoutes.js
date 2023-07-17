@@ -160,6 +160,7 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       include: {
         queue: {
           where: { position: { gte: 0 } },
+          orderBy: { position: 'asc' },
         },
       },
     });
@@ -181,13 +182,17 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       uris: [trackToPlay],
     });
 
-    // Mark the current song as played by setting its position to a negative number
-    await prisma.queue.update({
-      where: { id: nextSongInQueue.id },
-      data: { position: -Math.abs(nextSongInQueue.position) },
-    });
+    // Start a transaction to update all songs in the queue
+    const transaction = await prisma.$transaction(
+      playlist.queue.map((item) =>
+        prisma.queue.update({
+          where: { id: item.id },
+          data: { position: item.position > 0 ? item.position - 1 : 0 },
+        }),
+      ),
+    );
 
-    res.send('Playing next track in queue successfully');
+    res.send('Playing next track in queue successfully and updated queue positions');
   } catch (err) {
     console.error('Something went wrong!', err);
     return res.status(500).send('Something went wrong');
