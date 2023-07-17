@@ -266,6 +266,70 @@ router.get('/:name/history', async (req, res) => {
   res.json({ history: playlist.queue });
 });
 
+router.post('/:name/export', getSpotifyClient, async (req, res) => {
+  const hostName = req.params.name;
+
+  const host = await prisma.user.findUnique({
+    where: { name: hostName },
+  });
+
+  if (!host) {
+    return res.status(404).json({ error: 'Host not found' });
+  }
+
+  const event = await prisma.event.findFirst({
+    where: { hostId: host.id },
+    include: {
+      playlist: true,
+      playingTrack: {
+        include: { Album: { include: { Artist: true } } },
+      },
+    },
+  });
+
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found for this host' });
+  }
+
+  const playlist = await prisma.playlist.findUnique({
+    where: { id: event.playlistId },
+    include: {
+      queue: {
+        where: { position: { lt: 0 } }, // Only include tracks with position > 0
+        include: {
+          Track: {
+            include: {
+              Album: true,
+              Artist: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Generate list of Spotify track URIs
+  const spotifyTrackURIs = playlist.queue.map((queueItem) => queueItem.Track.uri);
+
+  try {
+    // Create Spotify playlist
+    const spotifyPlaylist = await req.spotifyClient.createPlaylist(`History for ${hostName}`, {
+      public: false,
+    });
+
+    // Add tracks to the Spotify playlist
+    await req.spotifyClient.addTracksToPlaylist(spotifyPlaylist.body.id, spotifyTrackURIs);
+
+    res.json({
+      message: 'Successfully exported history to Spotify playlist',
+      spotifyPlaylist: spotifyPlaylist.body,
+    });
+  } catch (err) {
+    console.error('Error creating Spotify playlist:', err);
+    return res.status(500).json({ error: 'Error creating Spotify playlist' });
+  }
+});
+
 router.get('/:name/playlist', async (req, res) => {
   const hostName = req.params.name;
 
