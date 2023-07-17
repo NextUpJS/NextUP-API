@@ -14,18 +14,23 @@ CREATE TABLE "Event" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" DATETIME NOT NULL,
-    "hostId" INTEGER NOT NULL,
+    "hostId" INTEGER NOT NULL DEFAULT 0,
     "playlistId" INTEGER NOT NULL DEFAULT 0,
+    "isPlaying" BOOLEAN NOT NULL DEFAULT false,
+    "playingTrackId" TEXT,
+    "active" BOOLEAN NOT NULL DEFAULT false,
+    "last_queue_item_added" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "last_random_song_attempt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "Event_hostId_fkey" FOREIGN KEY ("hostId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT "Event_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "Playlist" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "Event_playlistId_fkey" FOREIGN KEY ("playlistId") REFERENCES "Playlist" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT "Event_playingTrackId_fkey" FOREIGN KEY ("playingTrackId") REFERENCES "Track" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
 
 -- CreateTable
 CREATE TABLE "Playlist" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     "created_at" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" DATETIME NOT NULL,
-    "spotify_id" TEXT NOT NULL
+    "updated_at" DATETIME NOT NULL
 );
 
 -- CreateTable

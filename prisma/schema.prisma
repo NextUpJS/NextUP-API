@@ -23,11 +23,11 @@ model Event {
   created_at               DateTime @default(now())
   updated_at               DateTime @updatedAt
   host                     User     @relation(fields: [hostId], references: [id])
-  hostId                   Int
+  hostId                   Int      @default(0)
   playlist                 Playlist @relation(fields: [playlistId], references: [id])
   playlistId               Int      @default(0)
   isPlaying                Boolean  @default(false)
-  playingTrackId           String   @default("")
+  playingTrackId           String?
   playingTrack             Track?   @relation(fields: [playingTrackId], references: [id])
   active                   Boolean  @default(false)
   last_queue_item_added    DateTime @default(now())
@@ -41,7 +41,6 @@ model Playlist {
   songs      Song[]
   events     Event[]
   queue      Queue[]
-  spotify_id String?
 }
 
 model Queue {
