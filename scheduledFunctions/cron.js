@@ -10,7 +10,11 @@ exports.initScheduledJobs = () => {
       include: {
         playlist: {
           include: {
-            queue: true,
+            queue: {
+              orderBy: {
+                position: 'asc',
+              },
+            },
           },
         },
         host: true,
