@@ -400,7 +400,7 @@ router.get('/:name/playlist', async (req, res) => {
 
 router.post('/:username/playlist/reorder', async (req, res) => {
   const userName = req.params.username;
-  const { originIndex, destinationIndex } = req.body;
+  const { fromIndex, toIndex } = req.body;
 
   const user = await prisma.user.findUnique({
     where: { name: userName },
@@ -412,41 +412,46 @@ router.post('/:username/playlist/reorder', async (req, res) => {
 
   const event = await prisma.event.findFirst({
     where: { hostId: user.id },
-    include: {
-      playlist: true,
-      playingTrack: {
-        include: { Album: { include: { Artist: true } } },
-      },
-    },
   });
 
   if (!event) {
     return res.status(404).json({ error: 'Event not found for this user' });
   }
 
-  let musicTracks = await prisma.queue.findMany({
+  const queueItems = await prisma.queue.findMany({
     where: { playlistId: event.playlistId },
     orderBy: { position: 'asc' },
   });
 
-  if (originIndex >= musicTracks.length || destinationIndex >= musicTracks.length) {
-    res.status(400).json({ message: 'Invalid originIndex or destinationIndex.' });
+  if (
+    fromIndex >= queueItems.length ||
+    toIndex >= queueItems.length ||
+    fromIndex < 0 ||
+    toIndex < 0
+  ) {
+    res.status(400).json({ message: 'Invalid fromIndex or toIndex.' });
     return;
   }
 
-  const relocatedTrack = musicTracks.splice(originIndex, 1)[0];
-  musicTracks.splice(destinationIndex, 0, relocatedTrack);
+  const [movedItem] = queueItems.splice(fromIndex, 1);
+  queueItems.splice(toIndex, 0, movedItem);
 
-  musicTracks = await prisma.$transaction(
-    musicTracks.map((track, index) =>
+  try {
+    const trackUpdates = queueItems.map((item, index) =>
       prisma.queue.update({
-        where: { id: track.id },
-        data: { position: track.position < 0 ? track.position : index },
+        where: { id: item.id },
+        data: { position: item.position < 0 ? item.position : index },
       }),
-    ),
-  );
+    );
 
-  res.status(200).json({ message: 'Playlist reordered successfully.' });
+    await prisma.$transaction(trackUpdates);
+
+    return res.status(200).json({ message: 'Playlist reordered successfully.' });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ error: `An error occurred while updating the playlist: ${error.message}` });
+  }
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
