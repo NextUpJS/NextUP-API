@@ -438,16 +438,12 @@ router.post('/:name/playlist/reorder', async (req, res) => {
   tracks.splice(toIndex, 0, reorderedTrack);
 
   tracks = await prisma.$transaction(
-    tracks
-      .map((track, index) =>
-        track.position >= 0
-          ? prisma.queue.update({
-              where: { id: track.id },
-              data: { position: index },
-            })
-          : null,
-      )
-      .filter(Boolean),
+    tracks.map((track, index) =>
+      prisma.queue.update({
+        where: { id: track.id },
+        data: { position: index },
+      }),
+    ),
   );
 
   res.status(200).json({ message: 'Playlist reordered successfully.' });
