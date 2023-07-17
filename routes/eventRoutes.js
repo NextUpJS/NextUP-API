@@ -221,6 +221,51 @@ router.get('/:name/resume', getSpotifyClient, async (req, res) => {
   }
 });
 
+router.get('/:name/history', async (req, res) => {
+  const hostName = req.params.name;
+
+  const host = await prisma.user.findUnique({
+    where: { name: hostName },
+  });
+
+  if (!host) {
+    return res.status(404).json({ error: 'Host not found' });
+  }
+
+  const event = await prisma.event.findFirst({
+    where: { hostId: host.id },
+    include: {
+      playlist: true,
+      playingTrack: {
+        include: { Album: { include: { Artist: true } } },
+      },
+    },
+  });
+
+  const playlist = await prisma.playlist.findUnique({
+    where: { id: event.playlistId },
+    include: {
+      queue: {
+        where: { position: { lt: 0 } }, // Only include tracks with position > 0
+        include: {
+          Track: {
+            include: {
+              Album: true,
+              Artist: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found for this host' });
+  }
+
+  res.json({ history: playlist.queue });
+});
+
 router.get('/:name/playlist', async (req, res) => {
   const hostName = req.params.name;
 
