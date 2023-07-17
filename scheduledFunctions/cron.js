@@ -145,18 +145,16 @@ exports.initScheduledJobs = () => {
           console.log(nextSong);
           await spotifyClient.play({ uris: [`spotify:track:${nextSong.trackId}`] });
 
-          await prisma.playlist.update({
-            where: { id: event.playlist.id },
-            data: {
-              queue: {
-                update: {
-                  where: { id: nextSong.id },
-                  data: { position: -nextSong.position },
-                },
-              },
-            },
-          });
-          console.log(`Played next song`);
+          const transaction = await prisma.$transaction(
+            validQueueItems.map((item) =>
+              prisma.queue.update({
+                where: { id: item.id },
+                data: { position: item.position > 0 ? item.position - 1 : 0 },
+              }),
+            ),
+          );
+
+          console.log(`Played next song and updated queue positions.`);
         } else {
           console.log(`The queue is empty, no song to play.`);
 
