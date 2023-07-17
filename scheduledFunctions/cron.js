@@ -157,7 +157,10 @@ exports.initScheduledJobs = () => {
             where: { id: event.playlist.id },
             data: {
               queue: {
-                delete: { id: nextSong.id },
+                update: {
+                  where: { id: nextSong.id },
+                  data: { position: -nextSong.position },
+                },
               },
             },
           });
