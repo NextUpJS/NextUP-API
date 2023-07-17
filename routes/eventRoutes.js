@@ -414,7 +414,7 @@ router.post('/:username/playlist/reorder', async (req, res) => {
     where: { hostId: user.id },
     include: {
       playlist: true,
-      currentTrack: {
+      playingTrack: {
         include: { Album: { include: { Artist: true } } },
       },
     },
