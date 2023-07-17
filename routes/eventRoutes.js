@@ -407,10 +407,10 @@ router.post('/:username/playlist/reorder', async (req, res) => {
   });
 
   if (!user) {
-    return res.status(404).json({ error: 'User not located' });
+    return res.status(404).json({ error: 'User not found' });
   }
 
-  const occasion = await prisma.event.findFirst({
+  const event = await prisma.event.findFirst({
     where: { hostId: user.id },
     include: {
       playlist: true,
@@ -420,22 +420,17 @@ router.post('/:username/playlist/reorder', async (req, res) => {
     },
   });
 
-  if (!occasion) {
-    return res.status(404).json({ error: 'Occasion not discovered for this user' });
+  if (!event) {
+    return res.status(404).json({ error: 'Event not found for this user' });
   }
 
   let musicTracks = await prisma.queue.findMany({
-    where: { playlistId: occasion.playlistId },
+    where: { playlistId: event.playlistId },
     orderBy: { position: 'asc' },
   });
 
-  if (
-    originIndex >= musicTracks.length ||
-    destinationIndex >= musicTracks.length ||
-    originIndex < 0 ||
-    destinationIndex < 0
-  ) {
-    res.status(400).json({ message: 'Unacceptable originIndex or destinationIndex.' });
+  if (originIndex >= musicTracks.length || destinationIndex >= musicTracks.length) {
+    res.status(400).json({ message: 'Invalid originIndex or destinationIndex.' });
     return;
   }
 
@@ -446,12 +441,12 @@ router.post('/:username/playlist/reorder', async (req, res) => {
     musicTracks.map((track, index) =>
       prisma.queue.update({
         where: { id: track.id },
-        data: { position: index },
+        data: { position: track.position < 0 ? track.position : index },
       }),
     ),
   );
 
-  res.status(200).json({ message: 'Playlist rearranged successfully.' });
+  res.status(200).json({ message: 'Playlist reordered successfully.' });
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
