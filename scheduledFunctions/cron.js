@@ -28,7 +28,6 @@ exports.initScheduledJobs = () => {
     });
 
     for (const event of events) {
-      if (!event.active) continue;
       const now = new Date();
       const lastPlayed = new Date(event.last_queue_item_added);
       const differenceInMinutes = (now - lastPlayed) / 1000 / 60;
