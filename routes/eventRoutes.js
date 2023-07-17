@@ -437,29 +437,13 @@ router.post('/:name/playlist/reorder', async (req, res) => {
   const reorderedTrack = tracks.splice(fromIndex, 1)[0];
   tracks.splice(toIndex, 0, reorderedTrack);
 
-  // Calculate the new relative position for the reordered track
-  const newPosition =
-    toIndex > 0
-      ? (tracks[toIndex - 1].position + tracks[toIndex].position) / 2
-      : tracks[0].position / 2;
-
   // Prepare the operations
-  const operations = [
-    prisma.queue.update({
-      where: { id: reorderedTrack.id },
-      data: { position: newPosition },
-    }),
-  ];
-
-  // If there's a track after the reordered track, prepare its position update as well
-  if (tracks.length > toIndex + 1) {
-    operations.push(
-      prisma.queue.update({
-        where: { id: tracks[toIndex + 1].id },
-        data: { position: (tracks[toIndex].position + tracks[toIndex + 1].position) / 2 },
-      }),
-    );
-  }
+  const operations = tracks.map((track, index) => {
+    return prisma.queue.update({
+      where: { id: track.id },
+      data: { position: index },
+    });
+  });
 
   // Execute the operations in a transaction
   await prisma.$transaction(operations);
