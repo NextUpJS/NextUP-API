@@ -315,6 +315,7 @@ router.post('/:name/export', getSpotifyClient, async (req, res) => {
             },
           },
         },
+        orderBy: { position: 'desc' }, // Order tracks by position in ascending order
       },
     },
   });
