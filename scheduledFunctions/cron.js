@@ -147,12 +147,16 @@ exports.initScheduledJobs = () => {
           const nextSong = event.playlist.queue.find((song) => song.position > 0);
 
           if (!nextSong) {
-            console.log('No songs in the queue with a positive position.');
-            return;
+            console.log(
+              'No songs in the queue with a positive position. Continuing to play a random song.',
+            );
+          } else {
+            console.log(nextSong);
+            await spotifyClient.play({ uris: [`spotify:track:${nextSong.trackId}`] });
+            console.log(`Played next song`);
           }
 
-          console.log(nextSong);
-          await spotifyClient.play({ uris: [`spotify:track:${nextSong.trackId}`] });
+          // decrement positions of all songs in the queue
           for (const song of event.playlist.queue) {
             await prisma.queue.update({
               where: { id: song.id },
@@ -161,7 +165,6 @@ exports.initScheduledJobs = () => {
               },
             });
           }
-          console.log(`Played next song`);
         } else {
           console.log(`The queue is empty, no song to play.`);
 
