@@ -630,7 +630,7 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
     const validPositionCount = await prisma.queue.count({
       where: {
         position: {
-          gte: 1,
+          gt: 0,
         },
       },
     });
