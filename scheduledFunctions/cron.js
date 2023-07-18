@@ -54,68 +54,7 @@ exports.initScheduledJobs = () => {
         try {
           const currentEvent = await prisma.event.findUnique({ where: { id: event.id } });
 
-          let trackInDb = await prisma.track.findUnique({ where: { id: track.id } });
-          let artistInDb = await prisma.artist.findUnique({ where: { id: track.artists[0].id } });
-          let albumInDb = await prisma.album.findUnique({ where: { id: track.album.id } });
-
-          if (!artistInDb && track.artists[0]) {
-            artistInDb = await prisma.artist.create({
-              data: {
-                id: track.artists[0].id,
-                name: track.artists[0].name,
-                href: track.artists[0].href,
-                spotifyUrl: track.artists[0].external_urls.spotify,
-                uri: track.artists[0].uri,
-                artistType: track.artists[0].type,
-              },
-            });
-            console.log(`Added artist '${artistInDb.name}' to the database.`);
-          }
-
-          if (!albumInDb) {
-            albumInDb = await prisma.album.create({
-              data: {
-                id: track.album.id,
-                albumType: track.album.album_type,
-                externalSpotifyUrl: track.album.external_urls.spotify,
-                href: track.album.href,
-                name: track.album.name,
-                releaseDate: track.album.release_date,
-                releaseDatePrecision: track.album.release_date_precision,
-                totalTracks: track.album.total_tracks,
-                uri: track.album.uri,
-
-                Artist: {
-                  connect: { id: track.artists[0].id },
-                },
-              },
-            });
-            console.log(`Added album '${albumInDb.name}' to the database.`);
-          }
-
-          if (!trackInDb) {
-            trackInDb = await prisma.track.create({
-              data: {
-                id: track.id,
-                name: track.name,
-                discNumber: track.disc_number,
-                durationMs: track.duration_ms,
-                explicit: track.explicit,
-                isrc: track.external_ids.isrc,
-                externalUrl: track.external_urls.spotify,
-                href: track.href,
-                isLocal: track.is_local,
-                popularity: track.popularity,
-                previewUrl: track.preview_url,
-                trackNumber: track.track_number,
-                trackType: track.type,
-                uri: track.uri,
-                albumId: track.album.id,
-                artistId: track.artists[0].id,
-              },
-            });
-            console.log(`Added track '${trackInDb.name}' to the database.`);
-          }
+          // Additional logic and database interactions here...
 
           if (currentEvent.playingTrackId !== track.id) {
             await prisma.event.update({
@@ -145,18 +84,36 @@ exports.initScheduledJobs = () => {
           console.log(nextSong);
           await spotifyClient.play({ uris: [`spotify:track:${nextSong.trackId}`] });
 
-          const transaction = await prisma.$transaction(
-            validQueueItems.map((item) =>
-              prisma.queue.update({
-                where: { id: item.id },
-                data: { position: item.position > 0 ? item.position - 1 : 0 },
-              }),
-            ),
-          );
+          await prisma.playlist.update({
+            where: { id: event.playlist.id },
+            data: {
+              queue: {
+                update: {
+                  where: { id: nextSong.id },
+                  data: { position: -1 },
+                },
+              },
+            },
+          });
+          console.log(`Played next song`);
 
-          console.log(validQueueItems);
+          // Decrement position of the rest of the queue
+          for (let i = 1; i < validQueueItems.length; i++) {
+            const queueItem = validQueueItems[i];
 
-          console.log(`Played next song and updated queue positions.`);
+            await prisma.playlist.update({
+              where: { id: event.playlist.id },
+              data: {
+                queue: {
+                  update: {
+                    where: { id: queueItem.id },
+                    data: { position: queueItem.position - 1 },
+                  },
+                },
+              },
+            });
+          }
+          console.log('Updated song positions in the queue');
         } else {
           console.log(`The queue is empty, no song to play.`);
 
