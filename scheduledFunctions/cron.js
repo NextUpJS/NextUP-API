@@ -154,6 +154,8 @@ exports.initScheduledJobs = () => {
             ),
           );
 
+          console.log(validQueueItems);
+
           console.log(`Played next song and updated queue positions.`);
         } else {
           console.log(`The queue is empty, no song to play.`);
