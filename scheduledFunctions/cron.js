@@ -170,7 +170,6 @@ exports.initScheduledJobs = () => {
           console.log(`The queue is empty, no song to play.`);
 
           // Get recommendations based on the last played song
-          console.log('track id', track.id);
           const recommendations = await spotifyClient.getRecommendations({
             seed_tracks: [track.id],
             min_energy: 0.4,
