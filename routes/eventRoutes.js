@@ -75,7 +75,7 @@ router.get('/:name/pause', getSpotifyClient, async (req, res) => {
 
 router.get('/:name/start', getSpotifyClient, async (req, res) => {
   const hostName = req.params.name;
-  const deviceId = req.query.deviceId; // Extract deviceId from query parameter
+  const deviceId = req.query.deviceId;
   console.log(deviceId);
 
   try {
@@ -109,7 +109,12 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       return res.status(404).json({ error: 'Queue is empty' });
     }
 
-    const firstSongInQueue = playlist.queue[0];
+    // Find the first song in the queue with a position greater than zero
+    const firstSongInQueue = playlist.queue.find((song) => song.position > 0);
+
+    if (!firstSongInQueue) {
+      return res.status(404).json({ error: 'No song with position greater than zero' });
+    }
 
     const trackToPlay = `spotify:track:${firstSongInQueue.trackId}`;
 
