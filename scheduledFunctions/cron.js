@@ -144,19 +144,23 @@ exports.initScheduledJobs = () => {
 
         // if the queue is not empty, play the next song in the queue
         if (event.playlist.queue.length > 0) {
-          const nextSong = event.playlist.queue[0]; // assumes the queue is a list and the next song is at index 0
+          const nextSong = event.playlist.queue.find((song) => song.position > 0);
+
+          if (!nextSong) {
+            console.log('No songs in the queue with a positive position.');
+            return;
+          }
+
           console.log(nextSong);
           await spotifyClient.play({ uris: [`spotify:track:${nextSong.trackId}`] });
-
-          // remove the song from the queue
-          await prisma.playlist.update({
-            where: { id: event.playlist.id },
-            data: {
-              queue: {
-                delete: { id: nextSong.id },
+          for (const song of event.playlist.queue) {
+            await prisma.queue.update({
+              where: { id: song.id },
+              data: {
+                position: song.position - 1,
               },
-            },
-          });
+            });
+          }
           console.log(`Played next song`);
         } else {
           console.log(`The queue is empty, no song to play.`);
