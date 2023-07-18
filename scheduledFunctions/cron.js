@@ -143,8 +143,9 @@ exports.initScheduledJobs = () => {
         console.log(`The track '${track.name}' has ended for event: ${event.id}`);
 
         // if the queue is not empty, play the next song in the queue
-        if (event.playlist.queue.length > 0) {
-          const nextSong = event.playlist.queue.find((song) => song.position > 0);
+        const songsWithPosition = event.playlist.queue.filter((song) => song.position > 0);
+        if (songsWithPosition.length > 0) {
+          const nextSong = songsWithPosition[0];
 
           if (!nextSong) {
             console.log(
