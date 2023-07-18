@@ -256,7 +256,7 @@ router.get('/:name/history', async (req, res) => {
     where: { id: event.playlistId },
     include: {
       queue: {
-        where: { position: { lt: 0 } }, // Only include tracks with position > 0
+        where: { position: { gt: 0 } }, // Only include tracks with position > 0
         include: {
           Track: {
             include: {
@@ -265,6 +265,7 @@ router.get('/:name/history', async (req, res) => {
             },
           },
         },
+        orderBy: { position: 'asc' }, // Order tracks by position in ascending order
       },
     },
   });
