@@ -265,7 +265,7 @@ router.get('/:name/history', async (req, res) => {
             },
           },
         },
-        orderBy: { position: 'asc' }, // Order tracks by position in ascending order
+        orderBy: { position: 'desc' }, // Order tracks by position in ascending order
       },
     },
   });
