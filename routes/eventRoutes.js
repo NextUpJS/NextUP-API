@@ -374,10 +374,9 @@ router.get('/:name/playlist', async (req, res) => {
 
     const playlist = await prisma.playlist.findUnique({
       where: { id: event.playlistId },
-      orderBy: { position: 'asc' }, // Add this line to order by position in ascending order
       include: {
         queue: {
-          where: { position: { gt: 0 } },
+          orderBy: { position: 'asc' },
           include: {
             Track: {
               include: {
