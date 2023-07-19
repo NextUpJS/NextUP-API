@@ -388,8 +388,6 @@ router.get('/:name/playlist', async (req, res) => {
       return res.status(404).json({ error: 'Event not found for this host' });
     }
 
-    console.log('playlist', event.playlist);
-
     if (!event.playlist) {
       return res.status(404).json({ error: 'Playlist or Playing Track not found for this event' });
     }
