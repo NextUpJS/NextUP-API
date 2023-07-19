@@ -176,7 +176,7 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gt: 0 } },
+          where: { position: { gte: 0 } },
           orderBy: { position: 'asc' },
         },
       },
@@ -204,7 +204,14 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
       playlist.queue.map((item) =>
         prisma.queue.update({
           where: { id: item.id },
-          data: { position: item.position > 0 ? item.position - 1 : 0 },
+          data: {
+            position:
+              item.id === nextSongInQueue.id
+                ? 0
+                : item.position > 0
+                ? item.position - 1
+                : item.position,
+          },
         }),
       ),
     );
