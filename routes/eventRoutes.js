@@ -491,7 +491,7 @@ router.post('/:name/playlist/reorder', async (req, res) => {
         track.position > 0
           ? prisma.queue.update({
               where: { id: track.id },
-              data: { position: index + 1 + historicalCount }, // Add the count of historical tracks
+              data: { position: index + 1 - historicalCount }, // Add the count of historical tracks
             })
           : null,
       )
