@@ -390,7 +390,7 @@ router.get('/:name/playlist', async (req, res) => {
 
     console.log('playlist', event.playlist);
 
-    if (!event.playlist || !event.playingTrack) {
+    if (!event.playlist) {
       return res.status(404).json({ error: 'Playlist or Playing Track not found for this event' });
     }
 
