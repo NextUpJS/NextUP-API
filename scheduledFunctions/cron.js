@@ -146,6 +146,7 @@ exports.initScheduledJobs = () => {
         const songsWithPosition = event.playlist.queue.filter((song) => song.position > 0);
         if (songsWithPosition.length > 0) {
           const nextSong = songsWithPosition[0];
+          nextSong.position = 0;
 
           if (!nextSong) {
             console.log(
