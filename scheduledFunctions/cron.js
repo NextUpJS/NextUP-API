@@ -145,6 +145,30 @@ exports.initScheduledJobs = () => {
         // if the queue is not empty, play the next song in the queue
         const songsWithPosition = event.playlist.queue.filter((song) => song.position > 0);
         if (songsWithPosition.length > 0) {
+          // sort the queue by position in ascending order
+          songsWithPosition.sort((a, b) => a.position - b.position);
+
+          // check if the queue positions are sequential
+          let isSequential = true;
+          for (let i = 0; i < songsWithPosition.length - 1; i++) {
+            if (songsWithPosition[i].position + 1 !== songsWithPosition[i + 1].position) {
+              isSequential = false;
+              break;
+            }
+          }
+
+          if (!isSequential) {
+            for (let i = 0; i < songsWithPosition.length; i++) {
+              await prisma.queue.update({
+                where: { id: songsWithPosition[i].id },
+                data: {
+                  position: i + 1,
+                },
+              });
+            }
+            console.log(`Updated the positions in the queue for event: ${event.id}`);
+          }
+
           const nextSong = songsWithPosition[0];
 
           if (!nextSong) {
@@ -157,7 +181,6 @@ exports.initScheduledJobs = () => {
             console.log(`Played next song`);
           }
 
-          // decrement positions of all songs in the queue
           for (const song of event.playlist.queue) {
             await prisma.queue.update({
               where: { id: song.id },
