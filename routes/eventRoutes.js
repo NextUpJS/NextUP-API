@@ -451,23 +451,25 @@ router.post('/:name/playlist/reorder', async (req, res) => {
     return;
   }
 
-  const reorderedTrack = tracks.splice(fromIndex, 1)[0];
-  tracks.splice(toIndex, 0, reorderedTrack);
+  const trackToMove = tracks[fromIndex];
+  const targetTrack = tracks[toIndex];
 
-  tracks = await prisma.$transaction(
-    tracks
-      .map((track, index) =>
-        track.position > 0
-          ? prisma.queue.update({
-              where: { id: track.id },
-              data: { position: index },
-            })
-          : null,
-      )
-      .filter(Boolean),
-  );
+  try {
+    await prisma.$transaction([
+      prisma.queue.update({
+        where: { id: trackToMove.id },
+        data: { position: toIndex },
+      }),
+      prisma.queue.update({
+        where: { id: targetTrack.id },
+        data: { position: fromIndex },
+      }),
+    ]);
 
-  res.status(200).json({ message: 'Playlist reordered successfully.' });
+    res.status(200).json({ message: 'Playlist reordered successfully.' });
+  } catch (err) {
+    res.status(500).json({ error: 'Something went wrong while reordering the playlist.' });
+  }
 });
 
 router.delete('/:name/songs/:id', getSpotifyClient, async (req, res) => {
