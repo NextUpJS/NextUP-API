@@ -556,7 +556,7 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
 
     const event = await prisma.event.findFirst({
       where: { hostId: host.id },
-      include: { playlist: true, queue: true },
+      include: { playlist: true },
     });
 
     if (!event) {
