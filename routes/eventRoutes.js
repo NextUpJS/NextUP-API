@@ -376,7 +376,7 @@ router.get('/:name/playlist', async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gt: 0 } }, // Only include tracks with position > 0
+          where: { position: { gte: 0 } }, // Only include tracks with position > 0
           include: {
             Track: {
               include: {
