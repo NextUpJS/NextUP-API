@@ -396,7 +396,7 @@ router.get('/:name/playlist', async (req, res) => {
       where: { id: event.playlistId },
       include: {
         queue: {
-          where: { position: { gt: 0 } },
+          where: { position: { gte: 0 } },
           orderBy: { position: 'asc' },
           include: {
             Track: {
@@ -556,7 +556,7 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
 
     const event = await prisma.event.findFirst({
       where: { hostId: host.id },
-      include: { playlist: true },
+      include: { playlist: true, queue: true },
     });
 
     if (!event) {
