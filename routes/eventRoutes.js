@@ -414,6 +414,9 @@ router.post('/:name/playlist/reorder', async (req, res) => {
   const hostName = req.params.name;
   const { fromIndex, toIndex } = req.body;
 
+  console.log('from', fromIndex);
+  console.log('to', toIndex);
+
   const host = await prisma.user.findUnique({
     where: { name: hostName },
   });
@@ -441,6 +444,8 @@ router.post('/:name/playlist/reorder', async (req, res) => {
     orderBy: { position: 'asc' },
   });
 
+  tracks = tracks.filter((track) => track.position > 0);
+
   if (fromIndex >= tracks.length || toIndex >= tracks.length || fromIndex < 0 || toIndex < 0) {
     res.status(400).json({ message: 'Invalid fromIndex or toIndex.' });
     return;
@@ -452,7 +457,7 @@ router.post('/:name/playlist/reorder', async (req, res) => {
   tracks = await prisma.$transaction(
     tracks
       .map((track, index) =>
-        track.position >= 0
+        track.position > 0
           ? prisma.queue.update({
               where: { id: track.id },
               data: { position: index },
