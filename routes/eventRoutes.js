@@ -200,6 +200,7 @@ router.get('/:name/next', getSpotifyClient, async (req, res) => {
     });
 
     // Start a transaction to update all songs in the queue
+    console.log('next item id', nextSongInQueue.id);
     const transaction = await prisma.$transaction(
       playlist.queue.map((item) =>
         prisma.queue.update({
