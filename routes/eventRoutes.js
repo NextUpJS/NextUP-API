@@ -132,6 +132,18 @@ router.get('/:name/start', getSpotifyClient, async (req, res) => {
       data: { position: -firstSongInQueue.position },
     });
 
+    // Decrement the position of all other songs in the queue with a position greater than 0
+    const updatedSongs = await prisma.$transaction(
+      playlist.queue
+        .filter((song) => song.id !== firstSongInQueue.id && song.position > 0)
+        .map((song) =>
+          prisma.queue.update({
+            where: { id: song.id },
+            data: { position: song.position - 1 },
+          }),
+        ),
+    );
+
     res.send('Playing first track in queue successfully and removing it from the queue');
   } catch (err) {
     console.error('Something went wrong!', err);
