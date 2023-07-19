@@ -558,7 +558,7 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
 
     const event = await prisma.event.findFirst({
       where: { hostId: host.id },
-      include: { playlist: true },
+      include: { playlist: { include: { queue: true } } },
     });
 
     if (!event) {
@@ -667,13 +667,9 @@ router.post('/:name/songs', getSpotifyClient, async (req, res) => {
       },
     });
 
-    const validPositionCount = await prisma.queue.count({
-      where: {
-        position: {
-          gt: 0,
-        },
-      },
-    });
+    const { queue } = event.playlist;
+
+    const validPositionCount = queue.filter((item) => item.position > 0).length;
 
     console.log('valid positions', validPositionCount);
 
